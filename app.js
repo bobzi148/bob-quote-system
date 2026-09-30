@@ -1,4 +1,4 @@
-const DFLT={gst:10,targetMargin:1350,minMargin:1200,removalRetail:200,jayCost:215,superCost:280,merlinCost:420,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
+const DFLT={gst:10,targetMargin:1350,minMargin:1200,addonMarkup:0,removalRetail:200,jayCost:215,superCost:280,merlinCost:420,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
 const centSec={w:[[1500,2450],[2451,3000],[3001,3500],[3501,4300],[4301,4800],[4801,4880],[4881,5150],[5151,5565],[5566,5960],[5961,6200]],h:[[1860,2330],[2331,2440],[2441,2730],[2731,2910],[2911,3170],[3171,3425]],p:[[992,1053,1079,1244,1316,1416,1510,1638,2153,2265],[995,1067,1144,1426,1503,1551,1596,1715,2188,2300],[1034,1098,1308,1478,1583,1623,1658,1768,2236,2352],[1299,1374,1665,1866,2118,2175,2278,2453,2866,3011],[1343,1424,1713,1913,2164,2220,2324,2499,2909,3056],[1596,1689,2032,2274,2571,2637,2759,2968,3461,3634]]};
@@ -73,30 +73,140 @@ function defs(sup,type,w,h){
   ["matt","Premium Matt Colorbond","check",()=> (h<=2200?104:h<=2600?114:h<=3600?142:199)*lm(w)],["tap","Taper","check",()=>42*lm(w)],["rev","Reverse rolled","check",()=>w<=3100?105:149],["weather","Oversize weather seal","check",()=>8*lm(w)],["card","Hard cardboard cylinder stretch","check",()=>20*lm(w)],["shrink","Hard cardboard cylinder shrink","check",()=>27*lm(w)],["box","Box a Door packaging","check",()=>boxCost(w)]
  ];return[]
 }
-function renderAddons(preserve=true){const sup=$("supplier").value,type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,old={};if(preserve)document.querySelectorAll("[data-addon]").forEach(e=>old[e.dataset.addon]=e.type==="checkbox"?e.checked:e.value);if(sup==="Auto"){$("addonMessage").textContent="Select Steel-Line or Centurion to activate exact supplier-priced add-ons. Auto mode remains available for a standard door.";$("addonControls").innerHTML="";return}$("addonMessage").textContent=sup+" add-ons are calculated from the supplier list before GST.";$("addonControls").innerHTML=defs(sup,type,w,h).map(d=>{const c=d[3](),price=c==null?"Office review":money(c)+" ex GST";return d[2]==="qty"?`<div class="addon"><div><b>${d[1]}</b><br><small>${price} each</small></div><input data-addon="${d[0]}" data-kind="qty" type="number" min="0" step="1" value="${old[d[0]]||0}"></div>`:`<div class="addon"><label class="check"><input data-addon="${d[0]}" type="checkbox" ${old[d[0]]===true?"checked":""}><span><b>${d[1]}</b><br><small>${price}</small></span></label></div>`}).join("");document.querySelectorAll("[data-addon]").forEach(e=>e.addEventListener("input",calc))}
-function selectedAddons(){const ds=defs($("supplier").value,$("doorType").value,+$("width").value||0,+$("height").value||0);let total=0,names=[],review=false;ds.forEach(d=>{const e=document.querySelector(`[data-addon="${d[0]}"]`);if(!e)return;const q=d[2]==="qty"?(+e.value||0):(e.checked?1:0);if(!q)return;const c=d[3]();if(c==null){review=true;names.push(d[1]+" (review)")}else{total+=c*q;names.push(d[1]+(q>1?` ×${q}`:""))}});return{total,names,review}}
+function addonSuggestedRetail(cost){if(cost==null||!Number.isFinite(+cost))return 0;return Math.ceil((+cost)*(1+S.addonMarkup/100)*(1+S.gst/100)/10)*10}
+function resetAddonRetail(id){const e=document.querySelector(`[data-addon-retail="${id}"]`);if(!e)return;const c=+e.dataset.suggested||0;e.value=c;e.dataset.manual="0";calc()}
+function renderAddons(preserve=true){
+ const sup=$("supplier").value,type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,old={};
+ if(preserve)document.querySelectorAll("[data-addon-row]").forEach(row=>{
+   const id=row.dataset.addonRow,select=row.querySelector("[data-addon-select]"),qty=row.querySelector("[data-addon-qty]"),retail=row.querySelector("[data-addon-retail]");
+   old[id]={selected:!!select?.checked,qty:qty?.value||0,retail:retail?.value||"",manual:retail?.dataset.manual==="1"};
+ });
+ if(sup==="Auto"){
+   $("addonMessage").textContent="Select Steel-Line or Centurion to activate live add-on pricing. The sell price can be changed manually on every quote.";
+   $("addonControls").innerHTML="";return
+ }
+ $("addonMessage").textContent=`${sup} add-ons recalculate live from the current ${w} × ${h} mm door size. Suggested sell price includes GST and can be overridden.`;
+ $("addonControls").innerHTML=defs(sup,type,w,h).map(d=>{
+   const c=d[3](),suggested=addonSuggestedRetail(c),o=old[d[0]]||{},retail=o.manual?o.retail:suggested;
+   const supplierText=c==null?"Office review":money(c)+" ex GST";
+   const selector=d[2]==="qty"
+     ? `<div class="addon-qty-wrap"><label>Qty</label><input data-addon-qty="${d[0]}" type="number" min="0" step="1" value="${o.qty||0}"></div>`
+     : `<label class="check addon-check"><input data-addon-select="${d[0]}" type="checkbox" ${o.selected?"checked":""}><span>Add</span></label>`;
+   return `<div class="addon addon-live" data-addon-row="${d[0]}">
+     <div class="addon-info"><b>${d[1]}</b><div class="addon-cost admin-only">Supplier: ${supplierText}${d[2]==="qty"?" each":""}</div><div class="addon-dimension">Live for ${w} × ${h} mm</div></div>
+     <div class="addon-live-controls">${selector}<div class="addon-sell"><label>Sell incl. GST</label><div class="addon-sell-row"><span>$</span><input data-addon-retail="${d[0]}" data-suggested="${suggested}" data-manual="${o.manual?"1":"0"}" type="number" min="0" step="10" value="${retail}"><button type="button" class="mini-reset" onclick="resetAddonRetail('${d[0]}')">↺</button></div></div></div>
+   </div>`
+ }).join("");
+ document.querySelectorAll("[data-addon-select],[data-addon-qty]").forEach(e=>e.addEventListener("input",calc));
+ document.querySelectorAll("[data-addon-retail]").forEach(e=>e.addEventListener("input",()=>{e.dataset.manual="1";calc()}));
+}
+function selectedAddons(){
+ const ds=defs($("supplier").value,$("doorType").value,+$("width").value||0,+$("height").value||0);
+ let costTotal=0,retailTotal=0,names=[],items=[],review=false;
+ ds.forEach(d=>{
+   const row=document.querySelector(`[data-addon-row="${d[0]}"]`);if(!row)return;
+   const qty=d[2]==="qty"?(+row.querySelector("[data-addon-qty]")?.value||0):(row.querySelector("[data-addon-select]")?.checked?1:0);
+   if(!qty)return;
+   const c=d[3](),retailEl=row.querySelector("[data-addon-retail]"),unitRetail=+retailEl?.value||0;
+   if(c==null){review=true;names.push(d[1]+" (review)");items.push({id:d[0],name:d[1],qty,unitCost:null,unitRetail,totalRetail:unitRetail*qty});return}
+   const itemCost=c*qty,totalRetail=unitRetail*qty;
+   costTotal+=itemCost;retailTotal+=totalRetail;
+   names.push(d[1]+(qty>1?` ×${qty}`:""));
+   items.push({id:d[0],name:d[1],qty,unitCost:c,totalCost:itemCost,unitRetail,totalRetail});
+ });
+ return{total:costTotal,costTotal,retailTotal,names,items,review}
+}
 function qno(){const d=new Date(),p=n=>String(n).padStart(2,"0");return`BOB-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`}
 function calc(){
  const city=$("city").value,type=$("doorType").value,sup=$("supplier").value,w=+$("width").value||0,h=+$("height").value||0,b=base(type,w,h,sup),mi=motor(city,$("motor").value),ta=tech(type,w),ad=selectedAddons(),custom=+$("customExtra").value||0,rem=$("removal").value==="Yes",spec=validateRequiredSpecs(),contact=cityContact(city);
  let review=!b.ok||ad.review||!spec.ok,reason=!spec.ok?spec.reason:(!b.ok?(b.reason||"Size is outside automatic supplier pricing"):(ad.review?"Selected add-on needs office review":""));
- let rec=0,min=0;if(b.ok){rec=ceil50((b.cost+ad.total+mi.cost+ta+S.targetMargin)*(1+S.gst/100))+(rem?S.removalRetail:0)+custom;min=ceil50((b.cost+ad.total+mi.cost+ta+S.minMargin)*(1+S.gst/100))+(rem?S.removalRetail:0)+custom}
- const ftxt=$("finalOffer").value.trim(),f=ftxt?+$("finalOffer").value:0,issue=f||rec;if(f&&f<min){review=true;reason="Final offer is below the authorised minimum"}const margin=b.ok&&issue?((issue-(rem?S.removalRetail:0)-custom)/(1+S.gst/100)-b.cost-ad.total-mi.cost-ta):null;
- $("recommended").textContent=rec?money(rec):"REVIEW";$("minimum").textContent=min?money(min):"—";$("issue").textContent=issue?money(issue):"—";$("basisSupplier").textContent=b.ok?b.basis:"—";$("motorName").textContent=mi.name;$("steelCost").textContent=b.c&&b.c["Steel-Line"]?money(b.c["Steel-Line"].cost):"—";$("centCost").textContent=b.c&&b.c.Centurion?money(b.c.Centurion.cost):"—";$("addonCost").textContent=money(ad.total);$("techCost").textContent=money(ta);$("motorCost").textContent=money(mi.cost);$("margin").textContent=margin==null?"—":money(margin);$("margin").style.color=margin==null?"":margin<S.minMargin?"#b42318":margin<=1500?"#177a3d":"#0b1f33";
- const st=$("status");st.className="status "+(review?"bad":"good");st.textContent=review?"CALL OFFICE — "+reason:"READY — within authorised pricing";$("supplierAdvice").textContent=b.ok?(sup==="Auto"?`Auto uses the higher available supplier cost for safety. Cheaper current base supplier: ${b.recommended} ${money(b.recommendedCost)} ex GST.`:`Pricing basis: ${sup} ${money(b.cost)} ex GST.`):"";
+ let rec=0,min=0;
+ if(b.ok){
+   const gst=1+S.gst/100;
+   const costTarget=(b.cost+ad.costTotal+mi.cost+ta+S.targetMargin)*gst;
+   const baseTarget=(b.cost+mi.cost+ta+S.targetMargin)*gst+ad.retailTotal;
+   rec=ceil50(Math.max(costTarget,baseTarget)+(rem?S.removalRetail:0)+custom);
+   min=ceil50((b.cost+ad.costTotal+mi.cost+ta+S.minMargin)*gst+(rem?S.removalRetail:0)+custom);
+ }
+ const ftxt=$("finalOffer").value.trim(),f=ftxt?+$("finalOffer").value:0,issue=f||rec;
+ if(f&&f<min){review=true;reason="Final offer is below the authorised minimum"}
+ const margin=b.ok&&issue?((issue-(rem?S.removalRetail:0)-custom)/(1+S.gst/100)-b.cost-ad.costTotal-mi.cost-ta):null;
+ $("recommended").textContent=rec?money(rec):"REVIEW";$("minimum").textContent=min?money(min):"—";$("issue").textContent=issue?money(issue):"—";$("basisSupplier").textContent=b.ok?b.basis:"—";$("motorName").textContent=mi.name;
+ $("steelCost").textContent=b.c&&b.c["Steel-Line"]?money(b.c["Steel-Line"].cost):"—";$("centCost").textContent=b.c&&b.c.Centurion?money(b.c.Centurion.cost):"—";$("addonCost").textContent=money(ad.costTotal);$("techCost").textContent=money(ta);$("motorCost").textContent=money(mi.cost);$("margin").textContent=margin==null?"—":money(margin);$("margin").style.color=margin==null?"":margin<S.minMargin?"#b42318":margin<=1500?"#177a3d":"#0b1f33";
+ const st=$("status");st.className="status "+(review?"bad":"good");st.textContent=review?"CALL OFFICE — "+reason:"READY — within authorised pricing";
+ $("supplierAdvice").textContent=b.ok?(sup==="Auto"?`Auto uses the higher available supplier cost for safety. Cheaper current base supplier: ${b.recommended} ${money(b.recommendedCost)} ex GST.`:`Pricing basis: ${sup} ${money(b.cost)} ex GST. Selected add-ons supplier cost: ${money(ad.costTotal)} ex GST; quoted add-ons: ${money(ad.retailTotal)} incl. GST.`):"";
  const cust=$("customer").value.trim(),sub=$("suburb").value.trim(),notes=$("notes").value.trim(),qn=$("quoteNo").value.trim();
- const lines=[S.businessName.toUpperCase(),contact.phone?`Phone: ${contact.phone}`:null,contact.email?`Email: ${contact.email}`:null,contact.website?`Web: ${contact.website}`:null,qn?`Quote: ${qn}`:null,cust?`Customer: ${cust}`:null,sub?`Location: ${sub}`:null,"",`${type} garage door — supply & installation`,`Size: ${w} × ${h} mm`,`Colour: ${spec.colour||"NOT SELECTED"}`,`Profile: ${spec.profile||"NOT SELECTED"}`,`Motor: ${mi.name}`,`Removal of existing door: ${rem?"Yes":"No"}`,ad.names.length?`Options: ${ad.names.join(", ")}`:null,notes?`Notes: ${notes}`:null,"",issue?`TOTAL: ${money(issue)} incl. GST`:"PRICE: Office review required",review?"Office approval required before issuing quote.":`Price includes GST. Valid for ${S.quoteValidity} days.`].filter(x=>x!==null).join("\n");$("summary").textContent=lines;
- return{quoteNo:qn,customer:cust,phone:$("phone").value.trim(),email:$("email").value.trim(),suburb:sub,city,type,supplier:sup,w,h,colour:spec.colour,profile:spec.profile,motor:mi.name,addons:ad.names.join("; "),notes,recommended:rec,minimum:min,issue,status:review?"CALL OFFICE":"APPROVED",margin,businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity}
+ const optionText=ad.items.map(i=>i.name+(i.qty>1?` ×${i.qty}`:"")).join(", ");
+ const lines=[S.businessName.toUpperCase(),contact.phone?`Phone: ${contact.phone}`:null,contact.email?`Email: ${contact.email}`:null,contact.website?`Web: ${contact.website}`:null,qn?`Quote: ${qn}`:null,cust?`Customer: ${cust}`:null,sub?`Location: ${sub}`:null,"",`${type} garage door — supply & installation`,`Size: ${w} × ${h} mm`,`Colour: ${spec.colour||"NOT SELECTED"}`,`Profile: ${spec.profile||"NOT SELECTED"}`,`Motor: ${mi.name}`,`Removal of existing door: ${rem?"Yes":"No"}`,optionText?`Options: ${optionText}`:null,notes?`Notes: ${notes}`:null,"",issue?`TOTAL: ${money(issue)} incl. GST`:"PRICE: Office review required",review?"Office approval required before issuing quote.":`Price includes GST. Valid for ${S.quoteValidity} days.`].filter(x=>x!==null).join("\n");$("summary").textContent=lines;
+ return{quoteNo:qn,customer:cust,phone:$("phone").value.trim(),email:$("email").value.trim(),suburb:sub,city,type,supplier:sup,w,h,colour:spec.colour,profile:spec.profile,motor:mi.name,addons:ad.names.join("; "),addonItems:ad.items,addonCostTotal:ad.costTotal,addonRetailTotal:ad.retailTotal,removal:rem,removalRetail:rem?S.removalRetail:0,customExtra:custom,notes,recommended:rec,minimum:min,issue,status:review?"CALL OFFICE":"APPROVED",margin,businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity}
 }
-function toast(t){const x=$("toast");x.textContent=t;x.classList.add("show");setTimeout(()=>x.classList.remove("show"),1500)}
-async function nativeShare(){const q=calc();if(navigator.share){try{await navigator.share({title:`BOB Garage Doors Quote ${q.quoteNo}`,text:$("summary").textContent});return}catch(e){}}copyQuote()}
+function toast(t){const x=$("toast");x.textContent=t;x.classList.add("show");setTimeout(()=>x.classList.remove("show"),1800)}
 function phone(p){let x=(p||"").replace(/\D/g,"");if(x.startsWith("0"))x="61"+x.slice(1);return x}
-function shareWhatsApp(){const q=calc();window.open(`https://wa.me/${phone(q.phone)}?text=${encodeURIComponent($("summary").textContent)}`,"_blank")}
-function shareEmail(){const q=calc();location.href=`mailto:${q.email||""}?subject=${encodeURIComponent("BOB Garage Doors Quote "+q.quoteNo)}&body=${encodeURIComponent($("summary").textContent)}`}
-async function copyQuote(){try{await navigator.clipboard.writeText($("summary").textContent);toast("Quote copied")}catch(e){toast("Copy unavailable")}}
-function safe(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
-function printable(autoPrint=true){const q=calc(),scr=safe($("summary").textContent),contact=[q.businessPhone,q.businessEmail,q.businessWebsite].filter(Boolean).map(safe).join(" • ");return`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(q.quoteNo)}</title><style>body{font-family:Arial;color:#152536;padding:40px;max-width:820px;margin:auto}.head{background:#0b1f33;color:white;padding:24px;border-radius:16px}.logo{font-size:28px;font-weight:900}.contact{opacity:.8;margin-top:6px}.price{font-size:36px;font-weight:900;margin:26px 0;color:#174b2d}.box{border:1px solid #d8e0ea;border-radius:12px;padding:20px;line-height:1.7;white-space:pre-wrap}.foot{margin-top:25px;color:#687386;font-size:12px}@media(max-width:600px){body{padding:18px}}</style></head><body><div class="head"><img src="brand-logo.svg" style="width:210px;max-width:60%;height:auto"><div style="font-size:24px;font-weight:900;margin-top:8px">${safe(S.businessName)}</div><div>Supply & Installation Quote • ${safe(q.city)}</div><div class="contact">${contact}</div></div><div class="price">${q.issue?money(q.issue)+" incl. GST":"Office review required"}</div><div class="box">${scr}</div><div class="foot">Quote valid for ${safe(S.quoteValidity)} days.</div>${autoPrint?'<script>window.onload=()=>window.print()<\\/script>':""}</body></html>`}
+function shareWhatsApp(){const q=calc();const msg=`Hi ${q.customer||""}, your ${S.businessName} quote ${q.quoteNo} is ${money(q.issue)} incl. GST. I am sending the professional PDF separately from the Share PDF button.`;window.open(`https://wa.me/${phone(q.phone)}?text=${encodeURIComponent(msg)}`,"_blank")}
+function shareEmail(){const q=calc();location.href=`mailto:${q.email||""}?subject=${encodeURIComponent(S.businessName+" Quote "+q.quoteNo)}&body=${encodeURIComponent("Hi "+(q.customer||"")+",\n\nPlease find your quote attached. Use the Share PDF button in BOB Quotes to attach the PDF.\n\nRegards,\n"+S.businessName)}`}
+function safe(v){return String(v||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+async function logoPngData(){
+ try{
+   const svg=await fetch("brand-logo.svg").then(r=>r.text()),blob=new Blob([svg],{type:"image/svg+xml"}),url=URL.createObjectURL(blob),img=new Image();
+   const data=await new Promise((resolve,reject)=>{img.onload=()=>{const c=document.createElement("canvas");c.width=760;c.height=300;const x=c.getContext("2d");x.fillStyle="#0b1f33";x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);resolve(c.toDataURL("image/png"))};img.onerror=reject;img.src=url});
+   return data
+ }catch(e){return null}
+}
+function pdfFileName(q){return `${(q.quoteNo||"BOB-Quote").replace(/[^a-z0-9_-]/gi,"-")}.pdf`}
+function pdfMoney(n){return "$"+Number(n||0).toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2})}
+async function buildPdfQuote(){
+ const q=calc();if(q.status!=="APPROVED"){toast("Complete the quote and required fields first");return null}
+ if(!window.jspdf?.jsPDF){toast("PDF engine is still loading. Try again in a moment.");return null}
+ const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4",compress:true}),PW=210,PH=297,M=16,gst=1+S.gst/100;
+ const navy=[11,31,51],yellow=[247,190,35],ink=[26,38,50],muted=[100,112,126],line=[222,228,235],light=[247,249,252];
+ const logo=await logoPngData();
+ const header=()=>{doc.setFillColor(...navy);doc.rect(0,0,PW,46,"F");if(logo)doc.addImage(logo,"PNG",M,7,58,23);else{doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(21);doc.text("B.O.B GARAGE DOORS",M,24)}doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(17);doc.text("QUOTATION",PW-M,17,{align:"right"});doc.setFont("helvetica","normal");doc.setFontSize(9);doc.text(q.city+" Service",PW-M,24,{align:"right"});doc.setDrawColor(...yellow);doc.setLineWidth(1.5);doc.line(0,46,PW,46)};
+ header();
+ let y=57;
+ doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE DETAILS",M,y);y+=5;
+ doc.setFillColor(...light);doc.roundedRect(M,y,PW-2*M,27,3,3,"F");
+ doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...muted);
+ doc.text("Quote #",M+5,y+7);doc.text("Date",M+55,y+7);doc.text("Valid for",M+103,y+7);doc.text("Customer",M+142,y+7);
+ doc.setTextColor(...ink);doc.setFont("helvetica","bold");
+ doc.text(q.quoteNo||"-",M+5,y+14);doc.text(new Date().toLocaleDateString("en-AU"),M+55,y+14);doc.text(String(q.quoteValidity)+" days",M+103,y+14);doc.text((q.customer||"-").slice(0,26),M+142,y+14);
+ doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(...muted);doc.text([q.phone,q.email].filter(Boolean).join(" • ").slice(0,80),M+5,y+22);y+=36;
+
+ doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("SCOPE OF WORK",M,y);y+=5;
+ doc.setDrawColor(...line);doc.setFillColor(255,255,255);doc.roundedRect(M,y,PW-2*M,35,3,3,"FD");
+ const left=M+5,right=M+94;
+ doc.setFontSize(8.5);doc.setFont("helvetica","normal");doc.setTextColor(...muted);
+ [["Door type",q.type],["Size",q.w+" × "+q.h+" mm"],["Colour",q.colour],["Profile / style",q.profile]].forEach((r,i)=>{const yy=y+7+i*7;doc.setTextColor(...muted);doc.text(r[0],left,yy);doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.text(String(r[1]||"-").slice(0,34),left+28,yy);doc.setFont("helvetica","normal")});
+ [["Motor",q.motor],["Location",q.suburb||q.city],["Existing door removal",q.removal?"Included":"Not included"],["Supplier basis",q.supplier]].forEach((r,i)=>{const yy=y+7+i*7;doc.setTextColor(...muted);doc.text(r[0],right,yy);doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.text(String(r[1]||"-").slice(0,30),right+31,yy);doc.setFont("helvetica","normal")});
+ y+=44;
+
+ doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE ITEMS",M,y);y+=5;
+ const cols={desc:M,qty:145,amt:PW-M};
+ function tableHead(){doc.setFillColor(...navy);doc.rect(M,y,PW-2*M,9,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.text("DESCRIPTION",cols.desc+4,y+6);doc.text("QTY",cols.qty,y+6,{align:"center"});doc.text("AMOUNT",cols.amt-4,y+6,{align:"right"});y+=9}
+ function nextPageIf(h=9){if(y+h>252){doc.addPage();header();y=57;tableHead()}}
+ tableHead();
+ const extras=(q.addonItems||[]).reduce((a,i)=>a+(i.totalRetail||0),0)+(q.removalRetail||0)+(q.customExtra||0);
+ let baseRetail=Math.max(0,q.issue-extras);
+ let rows=[{d:`${q.type} garage door supply & installation`,q:1,a:baseRetail}];
+ (q.addonItems||[]).forEach(i=>rows.push({d:i.name,q:i.qty||1,a:i.totalRetail||0}));
+ if(q.removalRetail)rows.push({d:"Removal & disposal of existing garage door",q:1,a:q.removalRetail});
+ if(q.customExtra)rows.push({d:"Additional approved works",q:1,a:q.customExtra});
+ if(baseRetail<=0||Math.abs(rows.reduce((a,r)=>a+r.a,0)-q.issue)>1)rows=[{d:"Garage door supply, installation and selected options",q:1,a:q.issue}];
+ rows.forEach((r,i)=>{nextPageIf(10);if(i%2===0){doc.setFillColor(...light);doc.rect(M,y,PW-2*M,10,"F")}doc.setTextColor(...ink);doc.setFont("helvetica","normal");doc.setFontSize(8.5);const desc=doc.splitTextToSize(r.d,112);doc.text(desc,cols.desc+4,y+6);doc.text(String(r.q),cols.qty,y+6,{align:"center"});doc.setFont("helvetica","bold");doc.text(pdfMoney(r.a),cols.amt-4,y+6,{align:"right"});y+=Math.max(10,desc.length*4.2+3)});
+ y+=5;nextPageIf(33);
+ const ex=q.issue/gst,gstAmt=q.issue-ex;
+ doc.setDrawColor(...line);doc.line(120,y,PW-M,y);y+=7;doc.setFontSize(9);doc.setFont("helvetica","normal");doc.setTextColor(...muted);doc.text("Subtotal ex GST",151,y,{align:"right"});doc.setTextColor(...ink);doc.text(pdfMoney(ex),PW-M,y,{align:"right"});y+=7;doc.setTextColor(...muted);doc.text("GST",151,y,{align:"right"});doc.setTextColor(...ink);doc.text(pdfMoney(gstAmt),PW-M,y,{align:"right"});y+=8;doc.setFillColor(...yellow);doc.roundedRect(120,y-5,PW-M-120,13,2,2,"F");doc.setTextColor(...navy);doc.setFont("helvetica","bold");doc.setFontSize(12);doc.text("TOTAL",151,y+3,{align:"right"});doc.text(pdfMoney(q.issue),PW-M,y+3,{align:"right"});y+=20;
+ if(q.notes){nextPageIf(28);doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("NOTES",M,y);y+=5;doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(...muted);const note=doc.splitTextToSize(q.notes,PW-2*M);doc.text(note,M,y);y+=note.length*4.2+5}
+ nextPageIf(38);doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE INFORMATION",M,y);y+=6;doc.setFont("helvetica","normal");doc.setFontSize(8.3);doc.setTextColor(...muted);
+ const terms=[`This quotation is valid for ${q.quoteValidity} days.`,"All prices shown include GST unless stated otherwise.","Final manufacture/order is based on the confirmed door size, colour and profile shown above.","Any additional work not listed in this quotation requires approval before proceeding."];
+ terms.forEach(t=>{const a=doc.splitTextToSize("• "+t,PW-2*M);doc.text(a,M,y);y+=a.length*4.2+2});
+ doc.setDrawColor(...yellow);doc.setLineWidth(.8);doc.line(M,277,PW-M,277);doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(...ink);doc.text(S.businessName,M,283);doc.setFont("helvetica","normal");doc.setTextColor(...muted);doc.text([q.businessPhone,q.businessEmail,q.businessWebsite].filter(Boolean).join(" • ").slice(0,100),M,288);
+ return doc.output("blob")
+}
+function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500)}
+async function downloadPdfQuote(){const q=calc(),blob=await buildPdfQuote();if(!blob)return;downloadBlob(blob,pdfFileName(q));toast("PDF downloaded")}
+async function sharePdfQuote(){const q=calc(),blob=await buildPdfQuote();if(!blob)return;const file=new File([blob],pdfFileName(q),{type:"application/pdf"});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){try{await navigator.share({title:`${S.businessName} Quote ${q.quoteNo}`,text:`Quotation for ${q.customer||"customer"} - ${money(q.issue)} incl. GST`,files:[file]});return}catch(e){if(e?.name==="AbortError")return}}downloadBlob(blob,pdfFileName(q));toast("PDF downloaded - attach it to WhatsApp or email")}
+function printable(autoPrint=true){const q=calc(),scr=safe($("summary").textContent),contact=[q.businessPhone,q.businessEmail,q.businessWebsite].filter(Boolean).map(safe).join(" • ");return`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(q.quoteNo)}</title><style>body{font-family:Arial;color:#152536;padding:40px;max-width:820px;margin:auto}.head{background:#0b1f33;color:white;padding:24px;border-radius:16px}.contact{opacity:.8;margin-top:6px}.price{font-size:36px;font-weight:900;margin:26px 0;color:#174b2d}.box{border:1px solid #d8e0ea;border-radius:12px;padding:20px;line-height:1.7;white-space:pre-wrap}.foot{margin-top:25px;color:#687386;font-size:12px}@media(max-width:600px){body{padding:18px}}</style></head><body><div class="head"><img src="brand-logo.svg" style="width:210px;max-width:60%;height:auto"><div style="font-size:24px;font-weight:900;margin-top:8px">${safe(S.businessName)}</div><div>Supply & Installation Quote • ${safe(q.city)}</div><div class="contact">${contact}</div></div><div class="price">${q.issue?money(q.issue)+" incl. GST":"Office review required"}</div><div class="box">${scr}</div><div class="foot">Quote valid for ${safe(S.quoteValidity)} days.</div>${autoPrint?'<script>window.onload=()=>window.print()<\\/script>':""}</body></html>`}
 function printQuote(){const w=window.open("","_blank");if(!w)return toast("Allow pop-ups");w.document.write(printable(true));w.document.close()}
-function downloadQuote(){const q=calc(),blob=new Blob([printable(false)],{type:"text/html"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(q.quoteNo||"BOB-Quote")+".html";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function saveQuote(){const q=calc(),a=JSON.parse(localStorage.getItem("bob_v3_quotes")||"[]");a.unshift({...q,date:new Date().toISOString()});localStorage.setItem("bob_v3_quotes",JSON.stringify(a.slice(0,300)));toast("Quote saved")}
 function newQuote(){$("quoteNo").value=qno();["customer","phone","email","suburb","notes","finalOffer"].forEach(x=>$(x).value="");$("customExtra").value=0;$("removal").value="No";renderAddons(false);calc()}
 function setMode(m){if(m==="admin"&&S.adminPin){const p=prompt("Enter Admin PIN");if(p!==String(S.adminPin))return toast("Incorrect PIN")}document.body.className=m;localStorage.setItem("bob_v3_mode",m);if(m!=="admin"&&!$("settings").classList.contains("hidden"))showTab("builder",document.querySelector(".tab"))}
