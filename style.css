@@ -20,3 +20,18 @@
 @media print{.public-quote{background:#fff;padding:0}.public-card{box-shadow:none;border-radius:0}.public-actions{display:none}}
 
 .field.required-missing select,.field.required-missing input{border-color:#b42318;background:#fff1f0}
+
+.addon-live{grid-template-columns:minmax(0,1fr) minmax(250px,.9fr);align-items:stretch;padding:12px 13px}
+.addon-info{display:flex;flex-direction:column;justify-content:center;gap:4px}
+.addon-cost{font-size:11px;color:#5d6a7b}.addon-dimension{font-size:10px;color:#7b8795}
+.addon-live-controls{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:end}
+.addon-qty-wrap,.addon-sell{display:flex;flex-direction:column;gap:4px}
+.addon-qty-wrap label,.addon-sell label{font-size:9px}
+.addon-qty-wrap input,.addon-sell input{padding:9px;background:#fff}
+.addon-check{height:42px;padding:0 6px;border:1px solid #d9e2ec;border-radius:9px;justify-content:center;background:#fff}
+.addon-sell-row{display:grid;grid-template-columns:22px 1fr 32px;align-items:center;border:1px solid #ccd7e4;border-radius:9px;background:#fff;overflow:hidden}
+.addon-sell-row>span{font-weight:900;text-align:center;color:#617084}
+.addon-sell-row input{border:0;border-radius:0;box-shadow:none!important}
+.mini-reset{height:100%;border:0;background:#edf2f7;color:#0b1f33;font-weight:900;cursor:pointer}
+body.admin .addon-cost.admin-only{display:block!important}
+@media(max-width:650px){.addon-live{grid-template-columns:1fr}.addon-live-controls{grid-template-columns:80px 1fr}}
