@@ -1,4 +1,4 @@
-const C='bob-v6';
+const C='bob-v7';
 const A=['./','./index.html','./style.css','./app.js','./manifest.webmanifest','./icon.svg','./brand-logo.svg'];
 self.addEventListener('install',e=>e.waitUntil(Promise.all([caches.open(C).then(c=>c.addAll(A)),self.skipWaiting()])));
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k))))])));
