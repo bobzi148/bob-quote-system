@@ -366,12 +366,51 @@ function renderCatalog(){
  $("catalogNote").textContent=`Live preview for ${sup} ${type} door at ${w} × ${h} mm. Suggested sell uses ${S.addonMarkup}% add-on markup plus GST.`;
  $("addonTable").innerHTML="<tr><th>Add-on</th><th>Live supplier cost ex GST</th><th>Suggested sell incl GST</th><th>Pricing basis</th></tr>"+ds.map(d=>{const c=d[3](),sell=addonSuggestedRetail(c),basis=d[2]==="qty"?"Per item / quantity":"Per selected add-on";return `<tr><td><b>${d[1]}</b></td><td>${c==null?"Office review":money(c)}</td><td><b>${c==null?"—":money(sell)}</b></td><td>${basis} • current size ${w} × ${h} mm</td></tr>`}).join("")
 }
-function loadSettingsUI(){Object.keys(DFLT).forEach(k=>{const e=$("s_"+k);if(e)e.value=S[k]})}
-function saveSettings(){Object.keys(DFLT).forEach(k=>{const e=$("s_"+k);if(!e)return;S[k]=typeof DFLT[k]==="number"?(+e.value||0):e.value});localStorage.setItem("bob_v3_settings",JSON.stringify(S));renderAddons(true);renderPrices();renderCatalog();calc();toast("Settings saved")}
-function resetSettings(){if(confirm("Reset settings?")){S={...DFLT};localStorage.setItem("bob_v3_settings",JSON.stringify(S));loadSettingsUI();renderAddons(true);renderPrices();renderCatalog();calc()}}
-["plCity","plDoor","plSupplier","plMotor"].forEach(x=>$(x).addEventListener("change",renderPrices));["catSupplier","catDoor","catWidth","catHeight"].forEach(x=>$(x).addEventListener("input",renderCatalog));
-["city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","notes","customExtra","finalOffer","customer","phone","email","suburb","quoteNo"].forEach(x=>$(x).addEventListener("input",()=>{if(["doorType","supplier","width","height"].includes(x)){renderAddons(true);populateColourProfile(true)}if(x==="city")refreshHeaderContact();calc()}));
-if(!new URLSearchParams(location.search).get("quote")){$("quoteNo").value=qno();setMode(localStorage.getItem("bob_v3_mode")||"office");loadSettingsUI();populateColourProfile(false);renderAddons(false);renderPrices();renderCatalog();refreshHeaderContact();calc()}if("serviceWorker"in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("./sw.js").catch(()=>{});
+
+function loadSettingsUI(){Object.keys(DFLT).forEach(function(k){const e=$("s_"+k);if(e)e.value=S[k]})}
+function saveSettings(){
+ Object.keys(DFLT).forEach(function(k){const e=$("s_"+k);if(!e)return;S[k]=typeof DFLT[k]==="number"?(+e.value||0):e.value});
+ safeWrite("bob_v3_settings",JSON.stringify(S));renderAddons(true);renderPrices();renderCatalog();refreshHeaderContact();calc();saveDraft();toast("Settings saved")
+}
+function resetSettings(){
+ if(confirm("Reset business settings to defaults? Quote drafts and saved quotes will stay.")){S=Object.assign({},DFLT);safeWrite("bob_v3_settings",JSON.stringify(S));loadSettingsUI();renderAddons(true);renderPrices();renderCatalog();refreshHeaderContact();calc()}
+}
+async function repairApp(){
+ document.body.classList.add("repairing");saveDraft();
+ try{
+   if("caches" in window){const keys=await caches.keys();for(const k of keys)if(k.indexOf("bob-")===0)await caches.delete(k)}
+   if("serviceWorker" in navigator){const regs=await navigator.serviceWorker.getRegistrations();for(const r of regs)await r.unregister()}
+ }catch(e){}
+ const p=new URLSearchParams(location.search);p.delete("quote");p.set("fresh",Date.now());if(ROLE_LOCK)p.set("role",ROLE_LOCK);location.replace(location.pathname+"?"+p.toString())
+}
+function healthCheck(){
+ const ids=["builder","prices","addons","extraChoice","extraPrice","doorItems","summary","recommended"],missing=ids.filter(function(id){return !$(id)});
+ if(missing.length){localStorage.setItem("bob_last_error","Missing UI: "+missing.join(","));return false}
+ return true
+}
+function bindInputs(){
+ ["plCity","plDoor","plSupplier","plMotor"].forEach(function(x){if($(x))$(x).addEventListener("change",renderPrices)});
+ ["catSupplier","catDoor","catWidth","catHeight"].forEach(function(x){if($(x))$(x).addEventListener("input",renderCatalog)});
+ ["city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","notes","finalOffer","customer","phone","email","suburb","quoteNo"].forEach(function(x){if($(x))$(x).addEventListener("input",function(){
+   if(["doorType","supplier","width","height"].includes(x)){populateColourProfile(true);renderAddons(true)}
+   if(x==="city")refreshHeaderContact();calc();saveDraft()
+ })})
+}
+async function registerAppWorker(){
+ if(!("serviceWorker" in navigator)||location.protocol==="file:")return;
+ try{
+   const reg=await navigator.serviceWorker.register("./sw.js?v=10");await reg.update();
+   let reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload()})
+ }catch(e){}
+}
+function bootApp(){
+ if(new URLSearchParams(location.search).get("quote"))return;
+ if(!healthCheck())return;
+ loadSettingsUI();const restored=restoreDraft();
+ if(!restored){$("quoteNo").value=qno();$("city").value="Perth";populateColourProfile(false)}else populateColourProfile(true);
+ const initialMode=ROLE_LOCK||localStorage.getItem("bob_v3_mode")||"office";setMode(initialMode,true);
+ bindInputs();renderAddons(false);renderPrices();renderCatalog();refreshHeaderContact();calc();saveDraft();registerAppWorker()
+}
 function encodeQuote(q){const raw=encodeURIComponent(JSON.stringify(q));return btoa(unescape(raw)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
 function decodeQuote(x){try{let v=x.replace(/-/g,"+").replace(/_/g,"/");while(v.length%4)v+="=";return JSON.parse(decodeURIComponent(escape(atob(v))))}catch(e){return null}}
 function customerUrl(){const q=calc();if(q.status!=="APPROVED"){toast("Complete required fields before sharing");return""}const publicQ={quoteNo:q.quoteNo,customer:q.customer,suburb:q.suburb,city:q.city,type:q.type,w:q.w,h:q.h,colour:q.colour,profile:q.profile,motor:q.motor,addons:q.addons,notes:q.notes,issue:q.issue,businessName:S.businessName,businessPhone:q.businessPhone,businessEmail:q.businessEmail,businessWebsite:q.businessWebsite,quoteValidity:S.quoteValidity,created:new Date().toISOString()};return location.origin+location.pathname+"?quote="+encodeURIComponent(encodeQuote(publicQ))}
