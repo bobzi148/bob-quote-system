@@ -74,18 +74,25 @@ function defs(sup,type,w,h){
  ];return[]
 }
 function addonSuggestedRetail(cost){if(cost==null||!Number.isFinite(+cost))return 0;return Math.ceil((+cost)*(1+S.addonMarkup/100)*(1+S.gst/100)/10)*10}
+function effectiveAddonSupplier(sup,type,w,h){
+ if(sup!=="Auto")return sup;
+ const b=base(type,w,h,"Auto");
+ if(b.ok&&b.recommended)return b.recommended;
+ const c=costs(type,w,h);
+ if(c["Steel-Line"])return "Steel-Line";
+ if(c.Centurion)return "Centurion";
+ return "Steel-Line";
+}
 function resetAddonRetail(id){const e=document.querySelector(`[data-addon-retail="${id}"]`);if(!e)return;const c=+e.dataset.suggested||0;e.value=c;e.dataset.manual="0";calc()}
 function renderAddons(preserve=true){
- const sup=$("supplier").value,type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,old={};
+ const selectedSup=$("supplier").value,type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier(selectedSup,type,w,h),old={};
  if(preserve)document.querySelectorAll("[data-addon-row]").forEach(row=>{
    const id=row.dataset.addonRow,select=row.querySelector("[data-addon-select]"),qty=row.querySelector("[data-addon-qty]"),retail=row.querySelector("[data-addon-retail]");
    old[id]={selected:!!select?.checked,qty:qty?.value||0,retail:retail?.value||"",manual:retail?.dataset.manual==="1"};
  });
- if(sup==="Auto"){
-   $("addonMessage").textContent="Select Steel-Line or Centurion to activate live add-on pricing. The sell price can be changed manually on every quote.";
-   $("addonControls").innerHTML="";return
- }
- $("addonMessage").textContent=`${sup} add-ons recalculate live from the current ${w} × ${h} mm door size. Suggested sell price includes GST and can be overridden.`;
+ $("addonMessage").textContent=selectedSup==="Auto"
+   ? "Auto supplier mode: showing "+sup+" add-ons for this "+w+" × "+h+" mm door. Prices recalculate live and can be overridden."
+   : sup+" add-ons recalculate live from the current "+w+" × "+h+" mm door size. Suggested sell price includes GST and can be overridden.";
  $("addonControls").innerHTML=defs(sup,type,w,h).map(d=>{
    const c=d[3](),suggested=addonSuggestedRetail(c),o=old[d[0]]||{},retail=o.manual?o.retail:suggested;
    const supplierText=c==null?"Office review":money(c)+" ex GST";
@@ -101,7 +108,7 @@ function renderAddons(preserve=true){
  document.querySelectorAll("[data-addon-retail]").forEach(e=>e.addEventListener("input",()=>{e.dataset.manual="1";calc()}));
 }
 function selectedAddons(){
- const ds=defs($("supplier").value,$("doorType").value,+$("width").value||0,+$("height").value||0);
+ const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h),ds=defs(sup,type,w,h);
  let costTotal=0,retailTotal=0,names=[],items=[],review=false;
  ds.forEach(d=>{
    const row=document.querySelector(`[data-addon-row="${d[0]}"]`);if(!row)return;
