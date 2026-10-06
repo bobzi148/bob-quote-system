@@ -132,8 +132,8 @@ function repriceCurrentExtras(){
    const source=item.sourceSupplier||effectiveAddonSupplier($("supplier").value,type,w,h);
    const d=defs(source,type,w,h).find(function(x){return x[0]===item.presetId});
    if(!d)return Object.assign({},item,{unitCost:null,needsReview:true});
-   const c=d[3](),suggested=addonSuggestedRetail(c);
-   return Object.assign({},item,{name:d[1],sourceSupplier:source,unitCost:c,needsReview:c==null,unitRetail:item.manualRetail?item.unitRetail:suggested})
+   const c=d[3]();
+   return Object.assign({},item,{name:d[1],sourceSupplier:d[4]||source,unitCost:c,needsReview:c==null})
  })
 }
 function renderAddons(preserve){
@@ -142,73 +142,62 @@ function renderAddons(preserve){
  const selectedSup=$("supplier").value,type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier(selectedSup,type,w,h);
  repriceCurrentExtras();
  const oldChoice=preserve?$("extraChoice").value:"",ds=defs(sup,type,w,h);
- $("addonMessage").textContent=selectedSup==="Auto"
-   ? "Auto mode is using "+sup+" add-on pricing for this "+(w||"—")+" × "+(h||"—")+" mm door. Add as many separate extras as needed."
-   : sup+" add-ons recalculate live from the current "+(w||"—")+" × "+(h||"—")+" mm door size.";
+ $("addonMessage").textContent=selectedSup==="Auto" ? "Auto mode is using "+sup+" internal cost pricing for this "+(w||"—")+" × "+(h||"—")+" mm door. Customer price must be entered manually." : sup+" internal add-on costs recalculate live from the current "+(w||"—")+" × "+(h||"—")+" mm door size. Customer price must be entered manually.";
  $("extraChoice").innerHTML='<option value="">Select extra</option>'+ds.map(function(d){return '<option value="'+d[0]+'">'+d[1]+(d[4]?" — "+d[4]+" accessory":"")+'</option>'}).join("")+'<option value="__custom">Custom extra / product</option>';
  if(Array.from($("extraChoice").options).some(function(o){return o.value===oldChoice}))$("extraChoice").value=oldChoice;
- $("extraChoice").onchange=function(){$("extraPrice").dataset.manual="0";refreshExtraComposerPrice()};
- $("extraPrice").oninput=function(){$("extraPrice").dataset.manual="1"};
- refreshExtraComposerPrice();renderExtraItems()
+ $("extraChoice").onchange=refreshExtraComposerCost;
+ refreshExtraComposerCost();
+ renderExtraItems()
 }
-function refreshExtraComposerPrice(){
+function refreshExtraComposerCost(){
  if(!$("extraChoice"))return;
  const choice=$("extraChoice").value;
- if(!choice){if($("extraPrice").dataset.manual!=="1")$("extraPrice").value="";return}
- if(choice==="__custom"){if($("extraPrice").dataset.manual!=="1")$("extraPrice").value="";return}
+ $("extraCost").readOnly=true;
+ if(!choice){$("extraCost").value="";return}
+ if(choice==="__custom"){$("extraCost").readOnly=false;$("extraCost").value="";return}
  const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h),d=defs(sup,type,w,h).find(function(x){return x[0]===choice});
- if(!d)return;
- const suggested=addonSuggestedRetail(d[3]());
- if($("extraPrice").dataset.manual!=="1")$("extraPrice").value=suggested||""
+ $("extraCost").value=d&&d[3]()!=null?Math.round(d[3]()):""
 }
 function addExtraItem(){
- const choice=$("extraChoice").value,qty=Math.max(1,+$("extraQty").value||1),measure=$("extraMeasure").value.trim(),unitRetail=+$("extraPrice").value||0;
+ const choice=$("extraChoice").value,qty=Math.max(1,+$("extraQty").value||1),measure=$("extraMeasure").value.trim(),unitRetail=+$("extraPrice").value||0,enteredCost=+$("extraCost").value||0;
  if(!choice)return toast("Choose an extra first");
+ if(unitRetail<=0)return toast("Technician must enter the customer price");
  const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h);
  let item;
  if(choice==="__custom"){
-   const name=$("extraDescription").value.trim();
-   if(!name)return toast("Enter a description for the custom extra");
-   if(!unitRetail)return toast("Enter the sell price for the extra");
-   item={uid:uid(),presetId:null,name:name,measure:measure,qty:qty,unitCost:0,unitRetail:unitRetail,manualRetail:true,sourceSupplier:null,needsReview:false}
+   const name=$("extraDescription").value.trim();if(!name)return toast("Enter a description for the custom extra");
+   item={uid:uid(),presetId:null,name:name,measure:measure,qty:qty,unitCost:enteredCost,unitRetail:unitRetail,sourceSupplier:null,needsReview:false}
  }else{
    const d=defs(sup,type,w,h).find(function(x){return x[0]===choice});if(!d)return toast("Extra is not available for this door");
    const c=d[3]();if(c==null)return toast("This extra needs office pricing review");
-   item={uid:uid(),presetId:d[0],name:d[1],measure:measure,qty:qty,unitCost:c,unitRetail:unitRetail||addonSuggestedRetail(c),manualRetail:$("extraPrice").dataset.manual==="1",sourceSupplier:d[4]||sup,needsReview:false}
+   item={uid:uid(),presetId:d[0],name:d[1],measure:measure,qty:qty,unitCost:c,unitRetail:unitRetail,sourceSupplier:d[4]||sup,needsReview:false}
  }
  currentExtras.push(item);
- $("extraChoice").value="";$("extraDescription").value="";$("extraMeasure").value="";$("extraQty").value=1;$("extraPrice").value="";$("extraPrice").dataset.manual="0";
+ $("extraChoice").value="";$("extraDescription").value="";$("extraMeasure").value="";$("extraQty").value=1;$("extraCost").value="";$("extraPrice").value="";
  renderAddons(false);calc();saveDraft();toast("Extra added")
 }
 function renderExtraItems(){
  if(!$("extraItemsList"))return;
  if(!currentExtras.length){$("extraItemsList").innerHTML='<div class="hint">No extras added to this door yet.</div>';return}
  $("extraItemsList").innerHTML=currentExtras.map(function(i){
-   return '<div class="extra-item">'+
-   '<div><div class="extra-title">'+safe(i.name)+'</div><div class="extra-meta">'+(i.measure?safe(i.measure)+" • ":"")+(i.sourceSupplier?safe(i.sourceSupplier)+" • ":"")+(i.needsReview?"Office review":"Live priced")+'</div></div>'+
-   '<input aria-label="Size or measure" value="'+safe(i.measure||"")+'" onchange="updateExtraItem(\''+i.uid+'\',\'measure\',this.value)">'+
-   '<input aria-label="Quantity" type="number" min="1" step="1" value="'+(i.qty||1)+'" onchange="updateExtraItem(\''+i.uid+'\',\'qty\',this.value)">'+
-   '<input aria-label="Sell price" type="number" min="0" step="10" value="'+(i.unitRetail||0)+'" onchange="updateExtraItem(\''+i.uid+'\',\'unitRetail\',this.value)">'+
-   '<button class="remove-extra" title="Remove extra" onclick="removeExtraItem(\''+i.uid+'\')">×</button></div>'
- }).join("")
+   return '<div class="extra-item"><div><div class="extra-title">'+safe(i.name)+'</div><div class="extra-meta">'+(i.measure?safe(i.measure)+" • ":"")+(i.sourceSupplier?safe(i.sourceSupplier)+" • ":"")+"Internal cost "+money(i.unitCost||0)+" ex GST"+'</div></div><input data-extra-field="measure" data-extra-id="'+i.uid+'" aria-label="Size or measure" value="'+safe(i.measure||"")+'"><input data-extra-field="qty" data-extra-id="'+i.uid+'" aria-label="Quantity" type="number" min="1" step="1" value="'+(i.qty||1)+'"><input data-extra-field="unitRetail" data-extra-id="'+i.uid+'" aria-label="Customer price" type="number" min="0" step="10" value="'+(i.unitRetail||0)+'"><button class="remove-extra" data-remove-extra="'+i.uid+'" title="Remove extra">×</button></div>'
+ }).join("");
+ document.querySelectorAll("[data-extra-field]").forEach(function(el){el.addEventListener("change",function(){updateExtraItem(el.dataset.extraId,el.dataset.extraField,el.value)})});
+ document.querySelectorAll("[data-remove-extra]").forEach(function(el){el.addEventListener("click",function(){removeExtraItem(el.dataset.removeExtra)})})
 }
 function updateExtraItem(id,field,value){
  const i=currentExtras.find(function(x){return x.uid===id});if(!i)return;
- if(field==="qty")i.qty=Math.max(1,+value||1);
- else if(field==="unitRetail"){i.unitRetail=+value||0;i.manualRetail=true}
- else i[field]=value;
+ if(field==="qty")i.qty=Math.max(1,+value||1);else if(field==="unitRetail")i.unitRetail=+value||0;else i[field]=value;
  calc();saveDraft()
 }
 function removeExtraItem(id){currentExtras=currentExtras.filter(function(x){return x.uid!==id});renderExtraItems();calc();saveDraft()}
 function selectedAddons(){
- repriceCurrentExtras();
- let costTotal=0,retailTotal=0,names=[],items=[],review=false;
+ repriceCurrentExtras();let costTotal=0,retailTotal=0,names=[],items=[],review=false;
  currentExtras.forEach(function(i){
    const qty=Math.max(1,+i.qty||1),c=i.unitCost,unitRetail=+i.unitRetail||0,itemCost=c==null?0:c*qty,totalRetail=unitRetail*qty;
-   if(c==null||i.needsReview)review=true;
+   if(c==null||i.needsReview||unitRetail<=0)review=true;
    costTotal+=itemCost;retailTotal+=totalRetail;
-   const display=i.name+(i.measure?" — "+i.measure:"");
-   names.push(display+(qty>1?" ×"+qty:""));
+   const display=i.name+(i.measure?" — "+i.measure:"");names.push(display+(qty>1?" ×"+qty:""));
    items.push(Object.assign({},i,{qty:qty,totalCost:c==null?null:itemCost,totalRetail:totalRetail,displayName:display}))
  });
  return{total:costTotal,costTotal:costTotal,retailTotal:retailTotal,names:names,items:items,review:review}
