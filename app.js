@@ -1,4 +1,4 @@
-const DFLT={gst:10,targetMargin:1500,minMargin:1200,removalRetail:100,jayCost:215,jayRetail:450,superCost:280,superRetail:500,merlinCost:420,merlinRetail:650,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,bneRollerInstall:450,bneRollerRemove:550,bneSingleInstall:500,bneSingleRemove:600,bneMotorLabour:75,bneDoubleInstall:700,bneDoubleRemove:850,bneSpecialLift:300,bneSiteMeasure:50,bneDoubleWidth:3000,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
+const DFLT={gst:10,targetMargin:1500,minMargin:1200,removalRetail:100,jayCost:215,jayRetail:450,superCost:280,superRetail:500,merlinCost:420,merlinRetail:650,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,bneRollerInstall:450,bneRollerRemove:550,bneSingleInstall:500,bneSingleRemove:600,bneMotorLabour:75,bneDoubleInstall:700,bneDoubleRemove:850,bneSpecialLift:300,bneDoubleWidth:3000,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
 const APP_VERSION="v15", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
 const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
@@ -414,7 +414,7 @@ function healthCheck(){
 function bindInputs(){
  ["plCity","plDoor","plSupplier","plMotor"].forEach(function(x){if($(x))$(x).addEventListener("change",renderPrices)});
  ["catSupplier","catDoor","catWidth","catHeight"].forEach(function(x){if($(x))$(x).addEventListener("input",renderCatalog)});
- ["city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","specialLift","siteMeasure","notes","finalOffer","customer","phone","email","suburb","quoteNo"].forEach(function(x){if($(x))$(x).addEventListener("input",function(){
+ ["city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","specialLift","","notes","finalOffer","customer","phone","email","suburb","quoteNo"].forEach(function(x){if($(x))$(x).addEventListener("input",function(){
    if(["doorType","supplier","width","height"].includes(x)){populateColourProfile(true);renderAddons(true)}
    if(x==="city"){refreshHeaderContact();toggleBrisbaneInstallFields()}calc();saveDraft()
  })})
