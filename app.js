@@ -339,7 +339,8 @@ async function buildPdfQuote(){
  function tableEnsure(h){if(y+h>255){y=newPage();tableHead()}}
  tableHead();let rowNo=0;
  q.doors.forEach(function(d,di){
-   const extraRetail=(d.addonItems||[]).reduce(function(a,i){return a+(+i.totalRetail||0)},0)+(d.removalRetail||0),baseRetail=Math.max(0,d.issue-extraRetail),rows=[{d:"Door "+(di+1)+" — "+d.type+" garage door supply & installation",q:1,a:baseRetail}];
+   const extrasRetail=(d.addonItems||[]).reduce(function(a,i){return a+(+i.totalRetail||0)},0),allocatedRetail=extrasRetail+(d.removalRetail||0)+(d.motorRetail||0),baseRetail=Math.max(0,d.issue-allocatedRetail),rows=[{d:"Door "+(di+1)+" — "+d.type+" garage door supply & installation",q:1,a:baseRetail}];
+   if(d.motorRetail)rows.push({d:"Door "+(di+1)+" — "+d.motor+" motor",q:1,a:d.motorRetail});
    (d.addonItems||[]).forEach(function(i){rows.push({d:"Door "+(di+1)+" extra — "+(i.displayName||i.name),q:i.qty||1,a:i.totalRetail||0})});
    if(d.removalRetail)rows.push({d:"Door "+(di+1)+" — removal & disposal of existing garage door",q:1,a:d.removalRetail});
    rows.forEach(function(r){tableEnsure(11);if(rowNo++%2===0){doc.setFillColor.apply(doc,light);doc.rect(M,y,PW-2*M,10,"F")}doc.setTextColor.apply(doc,ink);doc.setFont("helvetica","normal");doc.setFontSize(8.2);const desc=doc.splitTextToSize(r.d,116);doc.text(desc,M+4,y+6);doc.text(String(r.q),cols.qty,y+6,{align:"center"});doc.setFont("helvetica","bold");doc.text(pdfMoney(r.a),cols.amt-4,y+6,{align:"right"});y+=Math.max(10,desc.length*4+3)})
