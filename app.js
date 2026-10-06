@@ -109,7 +109,6 @@ function defs(sup,type,w,h){
   ["matt","Premium Matt Colorbond","check",()=> (h<=2200?104:h<=2600?114:h<=3600?142:199)*lm(w)],["tap","Taper","check",()=>42*lm(w)],["rev","Reverse rolled","check",()=>w<=3100?105:149],["weather","Oversize weather seal","check",()=>8*lm(w)],["card","Hard cardboard cylinder stretch","check",()=>20*lm(w)],["shrink","Hard cardboard cylinder shrink","check",()=>27*lm(w)],["box","Box a Door packaging","check",()=>boxCost(w)]
  ];return[]
 }
-function addonSuggestedRetail(cost){if(cost==null||!Number.isFinite(+cost))return 0;return Math.ceil((+cost)*(1+S.addonMarkup/100)*(1+S.gst/100)/10)*10}
 function effectiveAddonSupplier(sup,type,w,h){
  if(sup!=="Auto")return sup;
  const b=base(type,w,h,"Auto");
