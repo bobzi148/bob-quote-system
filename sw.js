@@ -1,5 +1,12 @@
-const C='bob-v9';
-const A=['./','./index.html','./style.css','./app.js','./manifest.webmanifest','./icon.svg','./brand-logo.svg'];
-self.addEventListener('install',e=>e.waitUntil(Promise.all([caches.open(C).then(c=>c.addAll(A)),self.skipWaiting()])));
+const C='bob-v10';
+const CORE=['./','./index.html','./style.css?v=10','./app.js?v=10','./manifest.webmanifest?v=10','./brand-logo.svg?v=10','./icon.svg'];
+self.addEventListener('install',e=>e.waitUntil(Promise.all([caches.open(C).then(c=>c.addAll(CORE)),self.skipWaiting()])));
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k))))])));
-self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
+self.addEventListener('fetch',e=>{
+  const req=e.request,u=new URL(req.url);
+  if(req.mode==='navigate'||u.pathname.endsWith('/app.js')||u.pathname.endsWith('/style.css')||u.pathname.endsWith('/manifest.webmanifest')){
+    e.respondWith(fetch(req,{cache:'no-store'}).then(r=>{const copy=r.clone();caches.open(C).then(c=>c.put(req,copy));return r}).catch(()=>caches.match(req).then(r=>r||caches.match('./index.html'))));
+    return;
+  }
+  e.respondWith(caches.match(req).then(r=>r||fetch(req)));
+});
