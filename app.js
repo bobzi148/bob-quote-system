@@ -1,6 +1,6 @@
-const DFLT={gst:10,targetMargin:1500,minMargin:1200,addonMarkup:0,removalRetail:200,jayCost:215,superCost:280,merlinCost:420,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
+const DFLT={gst:10,targetMargin:1500,minMargin:1200,removalRetail:200,jayCost:215,jayRetail:450,superCost:280,superRetail:500,merlinCost:420,merlinRetail:650,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,bneRollerInstall:450,bneRollerRemove:550,bneSingleInstall:500,bneSingleRemove:600,bneMotorLabour:75,bneDoubleInstall:700,bneDoubleRemove:850,bneSpecialLift:300,bneSiteMeasure:50,bneDoubleWidth:3000,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
-const APP_VERSION="v12", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
+const APP_VERSION="v14", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
 const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
 let currentExtras=[],quoteDoors=[];
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
@@ -12,11 +12,14 @@ const $=id=>document.getElementById(id), money=n=>n==null?"—":"$"+Math.round(+
 function loadSettings(){
  try{
    const raw=JSON.parse(localStorage.getItem("bob_v3_settings")||"{}"),merged={...DFLT,...raw},migration=+(localStorage.getItem("bob_settings_migration_version")||0);
-   if(migration<12){
+   if(migration<14){
      merged.minMargin=1200;
      if(raw.targetMargin===undefined||+raw.targetMargin===1350)merged.targetMargin=1500;
+     if(raw.jayRetail===undefined)merged.jayRetail=450;
+     if(raw.superRetail===undefined)merged.superRetail=500;
+     if(raw.merlinRetail===undefined)merged.merlinRetail=650;
      localStorage.setItem("bob_v3_settings",JSON.stringify(merged));
-     localStorage.setItem("bob_settings_migration_version","12");
+     localStorage.setItem("bob_settings_migration_version","14");
    }
    return merged
  }catch(e){return {...DFLT}}
@@ -68,7 +71,24 @@ function centRollCost(w,h){w=+w;h=+h;if(w<=3100){const wi=idx(w,centA.w),hh=ceil
 function costs(type,w,h){return type==="Sectional"?{"Steel-Line":steelSecCost(w,h),Centurion:centSecCost(w,h)}:{"Steel-Line":steelRollCost(w,h),Centurion:centRollCost(w,h)}}
 function base(type,w,h,sup){const c=costs(type,w,h),a=Object.entries(c).filter(x=>x[1]);if(!a.length)return{ok:false,c};if(sup!=="Auto"){if(!c[sup])return{ok:false,c,reason:sup+" has no automatic table price for this size"};return{ok:true,c,cost:c[sup].cost,basis:sup,recommended:sup}}const hi=a.reduce((x,y)=>y[1].cost>x[1].cost?y:x),lo=a.reduce((x,y)=>y[1].cost<x[1].cost?y:x);return{ok:true,c,cost:hi[1].cost,basis:"Auto / higher cost",recommended:lo[0],recommendedCost:lo[1].cost,maxSupplier:hi[0]}}
 function tech(type,w){if(type==="Roller")return w<=3100?S.techRollerSmall:S.techRollerLarge;if(w<=3000)return S.techSectionalSmall;if(w<=4800)return S.techSectionalMed;return S.techSectionalLarge}
-function motor(city,m){if(m==="Manual")return{name:"Manual",cost:0};if(m==="Merlin")return{name:"Merlin",cost:S.merlinCost};return city==="Perth"?{name:"JayTech",cost:S.jayCost}:{name:"Superlift",cost:S.superCost}}
+function installationCost(city,type,w,h,removal,motorName,specialLift,siteMeasure){
+ if(city!=="Brisbane")return{ok:true,cost:tech(type,w),label:"Perth technician allowance"};
+ let cost=0,label="";
+ if(type==="Roller"){
+   if(w>3500||h>2700)return{ok:false,cost:null,label:"Sparrow Roller pricing only covers up to 3500W × 2700H"};
+   cost=removal?S.bneRollerRemove:S.bneRollerInstall;
+   label=removal?"Sparrow Roller remove + install":"Sparrow Roller install";
+ }else{
+   const isDouble=w>S.bneDoubleWidth;
+   cost=isDouble?(removal?S.bneDoubleRemove:S.bneDoubleInstall):(removal?S.bneSingleRemove:S.bneSingleInstall);
+   if(motorName!=="Manual")cost+=S.bneMotorLabour;
+   label="Sparrow "+(isDouble?"Double":"Single")+" Sectional"+(removal?" remove + install":" install")+(motorName!=="Manual"?" + motor labour":"");
+ }
+ if(specialLift)cost+=S.bneSpecialLift;
+ if(siteMeasure)cost+=S.bneSiteMeasure;
+ return{ok:true,cost:cost,label:label}
+}
+function motor(city,m){if(m==="Manual")return{name:"Manual",cost:0,retail:0};if(m==="Merlin")return{name:"Merlin",cost:S.merlinCost,retail:S.merlinRetail};return city==="Perth"?{name:"JayTech",cost:S.jayCost,retail:S.jayRetail}:{name:"Superlift",cost:S.superCost,retail:S.superRetail}}
 const lm=w=>w/1000,sqm=(w,h)=>w*h/1e6;
 function insulation(w,h){let wi=w<=3000?0:w<=5500?1:w<=6700?2:-1,hi=h<=2285?0:h<=2850?1:h<=3415?2:-1;return wi<0||hi<0?null:[[818,1039,1195],[1007,1290,1510],[1195,1447,1699]][hi][wi]}
 function boxCost(w){if(w<=2500)return 101;if(w<=2800)return 106;if(w<=3100)return 111;if(w<=3400)return 116;if(w<=3700)return 122;if(w<=4000)return 130;if(w<=4300)return 138;if(w<=4600)return 145;if(w<=4900)return 151;if(w<=5400)return 157;return null}
