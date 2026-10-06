@@ -266,8 +266,16 @@ function restoreDraft(){
 }
 function toast(t){const x=$("toast");x.textContent=t;x.classList.add("show");setTimeout(()=>x.classList.remove("show"),1800)}
 function phone(p){let x=(p||"").replace(/\D/g,"");if(x.startsWith("0"))x="61"+x.slice(1);return x}
-function shareWhatsApp(){const q=calc();const msg=`Hi ${q.customer||""}, your ${S.businessName} quote ${q.quoteNo} is ${money(q.issue)} incl. GST. I am sending the professional PDF separately from the Share PDF button.`;window.open(`https://wa.me/${phone(q.phone)}?text=${encodeURIComponent(msg)}`,"_blank")}
-function shareEmail(){const q=calc();location.href=`mailto:${q.email||""}?subject=${encodeURIComponent(S.businessName+" Quote "+q.quoteNo)}&body=${encodeURIComponent("Hi "+(q.customer||"")+",\n\nPlease find your quote attached. Use the Share PDF button in BOB Quotes to attach the PDF.\n\nRegards,\n"+S.businessName)}`}
+
+function shareWhatsApp(){
+ const q=getFullQuote();if(q.status!=="APPROVED")return toast("Complete all doors before sharing");
+ const msg="Hi "+(q.customer||"")+", your "+S.businessName+" quotation "+q.quoteNo+" totals "+money(q.issue)+" incl. GST. I am sending the professional PDF separately.";
+ window.open("https://wa.me/"+phone(q.phone)+"?text="+encodeURIComponent(msg),"_blank")
+}
+function shareEmail(){
+ const q=getFullQuote();if(q.status!=="APPROVED")return toast("Complete all doors before emailing");
+ location.href="mailto:"+(q.email||"")+"?subject="+encodeURIComponent(S.businessName+" Quote "+q.quoteNo)+"&body="+encodeURIComponent("Hi "+(q.customer||"")+",\n\nPlease find your professional quotation attached. Use the Share PDF button to attach the PDF.\n\nRegards,\n"+S.businessName)
+}
 function safe(v){return String(v||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 async function logoPngData(){
  try{
@@ -278,57 +286,53 @@ async function logoPngData(){
 }
 function pdfFileName(q){return `${(q.quoteNo||"BOB-Quote").replace(/[^a-z0-9_-]/gi,"-")}.pdf`}
 function pdfMoney(n){return "$"+Number(n||0).toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2})}
+
 async function buildPdfQuote(){
- const q=calc();if(q.status!=="APPROVED"){toast("Complete the quote and required fields first");return null}
- if(!window.jspdf?.jsPDF){toast("PDF engine is still loading. Try again in a moment.");return null}
- const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4",compress:true}),PW=210,PH=297,M=16,gst=1+S.gst/100;
- const navy=[11,31,51],yellow=[247,190,35],ink=[26,38,50],muted=[100,112,126],line=[222,228,235],light=[247,249,252];
- const logo=await logoPngData();
- const header=()=>{doc.setFillColor(...navy);doc.rect(0,0,PW,46,"F");if(logo)doc.addImage(logo,"PNG",M,7,58,23);else{doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(21);doc.text("B.O.B GARAGE DOORS",M,24)}doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(17);doc.text("QUOTATION",PW-M,17,{align:"right"});doc.setFont("helvetica","normal");doc.setFontSize(9);doc.text(q.city+" Service",PW-M,24,{align:"right"});doc.setDrawColor(...yellow);doc.setLineWidth(1.5);doc.line(0,46,PW,46)};
- header();
- let y=57;
- doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE DETAILS",M,y);y+=5;
- doc.setFillColor(...light);doc.roundedRect(M,y,PW-2*M,27,3,3,"F");
- doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...muted);
- doc.text("Quote #",M+5,y+7);doc.text("Date",M+55,y+7);doc.text("Valid for",M+103,y+7);doc.text("Customer",M+142,y+7);
- doc.setTextColor(...ink);doc.setFont("helvetica","bold");
- doc.text(q.quoteNo||"-",M+5,y+14);doc.text(new Date().toLocaleDateString("en-AU"),M+55,y+14);doc.text(String(q.quoteValidity)+" days",M+103,y+14);doc.text((q.customer||"-").slice(0,26),M+142,y+14);
- doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(...muted);doc.text([q.phone,q.email].filter(Boolean).join(" • ").slice(0,80),M+5,y+22);y+=36;
-
- doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("SCOPE OF WORK",M,y);y+=5;
- doc.setDrawColor(...line);doc.setFillColor(255,255,255);doc.roundedRect(M,y,PW-2*M,35,3,3,"FD");
- const left=M+5,right=M+94;
- doc.setFontSize(8.5);doc.setFont("helvetica","normal");doc.setTextColor(...muted);
- [["Door type",q.type],["Size",q.w+" × "+q.h+" mm"],["Colour",q.colour],["Profile / style",q.profile]].forEach((r,i)=>{const yy=y+7+i*7;doc.setTextColor(...muted);doc.text(r[0],left,yy);doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.text(String(r[1]||"-").slice(0,34),left+28,yy);doc.setFont("helvetica","normal")});
- [["Motor",q.motor],["Location",q.suburb||q.city],["Existing door removal",q.removal?"Included":"Not included"],["Installation","Supply & installation included"]].forEach((r,i)=>{const yy=y+7+i*7;doc.setTextColor(...muted);doc.text(r[0],right,yy);doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.text(String(r[1]||"-").slice(0,30),right+31,yy);doc.setFont("helvetica","normal")});
- y+=44;
-
- doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE ITEMS",M,y);y+=5;
- const cols={desc:M,qty:145,amt:PW-M};
- function tableHead(){doc.setFillColor(...navy);doc.rect(M,y,PW-2*M,9,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.text("DESCRIPTION",cols.desc+4,y+6);doc.text("QTY",cols.qty,y+6,{align:"center"});doc.text("AMOUNT",cols.amt-4,y+6,{align:"right"});y+=9}
- function nextPageIf(h=9){if(y+h>252){doc.addPage();header();y=57;tableHead()}}
- tableHead();
- const extras=(q.addonItems||[]).reduce((a,i)=>a+(i.totalRetail||0),0)+(q.removalRetail||0)+(q.customExtra||0);
- let baseRetail=Math.max(0,q.issue-extras);
- let rows=[{d:`${q.type} garage door supply & installation`,q:1,a:baseRetail}];
- (q.addonItems||[]).forEach(i=>rows.push({d:i.name,q:i.qty||1,a:i.totalRetail||0}));
- if(q.removalRetail)rows.push({d:"Removal & disposal of existing garage door",q:1,a:q.removalRetail});
- if(q.customExtra)rows.push({d:"Additional approved works",q:1,a:q.customExtra});
- if(baseRetail<=0||Math.abs(rows.reduce((a,r)=>a+r.a,0)-q.issue)>1)rows=[{d:"Garage door supply, installation and selected options",q:1,a:q.issue}];
- rows.forEach((r,i)=>{nextPageIf(10);if(i%2===0){doc.setFillColor(...light);doc.rect(M,y,PW-2*M,10,"F")}doc.setTextColor(...ink);doc.setFont("helvetica","normal");doc.setFontSize(8.5);const desc=doc.splitTextToSize(r.d,112);doc.text(desc,cols.desc+4,y+6);doc.text(String(r.q),cols.qty,y+6,{align:"center"});doc.setFont("helvetica","bold");doc.text(pdfMoney(r.a),cols.amt-4,y+6,{align:"right"});y+=Math.max(10,desc.length*4.2+3)});
- y+=5;nextPageIf(33);
- const ex=q.issue/gst,gstAmt=q.issue-ex;
- doc.setDrawColor(...line);doc.line(120,y,PW-M,y);y+=7;doc.setFontSize(9);doc.setFont("helvetica","normal");doc.setTextColor(...muted);doc.text("Subtotal ex GST",151,y,{align:"right"});doc.setTextColor(...ink);doc.text(pdfMoney(ex),PW-M,y,{align:"right"});y+=7;doc.setTextColor(...muted);doc.text("GST",151,y,{align:"right"});doc.setTextColor(...ink);doc.text(pdfMoney(gstAmt),PW-M,y,{align:"right"});y+=8;doc.setFillColor(...yellow);doc.roundedRect(120,y-5,PW-M-120,13,2,2,"F");doc.setTextColor(...navy);doc.setFont("helvetica","bold");doc.setFontSize(12);doc.text("TOTAL",151,y+3,{align:"right"});doc.text(pdfMoney(q.issue),PW-M,y+3,{align:"right"});y+=20;
- if(q.notes){nextPageIf(28);doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("NOTES",M,y);y+=5;doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(...muted);const note=doc.splitTextToSize(q.notes,PW-2*M);doc.text(note,M,y);y+=note.length*4.2+5}
- nextPageIf(38);doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE INFORMATION",M,y);y+=6;doc.setFont("helvetica","normal");doc.setFontSize(8.3);doc.setTextColor(...muted);
- const terms=[`This quotation is valid for ${q.quoteValidity} days.`,"All prices shown include GST unless stated otherwise.","Final manufacture/order is based on the confirmed door size, colour and profile shown above.","Any additional work not listed in this quotation requires approval before proceeding."];
- terms.forEach(t=>{const a=doc.splitTextToSize("• "+t,PW-2*M);doc.text(a,M,y);y+=a.length*4.2+2});
- doc.setDrawColor(...yellow);doc.setLineWidth(.8);doc.line(M,277,PW-M,277);doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(...ink);doc.text(S.businessName,M,283);doc.setFont("helvetica","normal");doc.setTextColor(...muted);doc.text([q.businessPhone,q.businessEmail,q.businessWebsite].filter(Boolean).join(" • ").slice(0,100),M,288);
+ const q=getFullQuote();if(q.status!=="APPROVED"||!q.doors.length){toast("Complete all doors and required fields first");return null}
+ if(!window.jspdf||!window.jspdf.jsPDF){toast("PDF engine is still loading. Try again in a moment.");return null}
+ const jsPDF=window.jspdf.jsPDF,doc=new jsPDF({unit:"mm",format:"a4",compress:true}),PW=210,M=15,gst=1+S.gst/100;
+ const navy=[11,31,51],yellow=[247,190,35],ink=[26,38,50],muted=[100,112,126],line=[222,228,235],light=[247,249,252],logo=await logoPngData();
+ function header(){
+   doc.setFillColor.apply(doc,navy);doc.rect(0,0,PW,48,"F");
+   if(logo)doc.addImage(logo,"PNG",M,5,67,28);else{doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(20);doc.text("B.O.B GARAGE DOORS",M,24)}
+   doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(18);doc.text("QUOTATION",PW-M,17,{align:"right"});
+   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.text(q.city+" Service",PW-M,25,{align:"right"});doc.setDrawColor.apply(doc,yellow);doc.setLineWidth(1.6);doc.line(0,48,PW,48)
+ }
+ function newPage(){doc.addPage();header();return 59}
+ header();let y=59;
+ function ensure(h){if(y+h>267)y=newPage()}
+ doc.setTextColor.apply(doc,ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE DETAILS",M,y);y+=5;doc.setFillColor.apply(doc,light);doc.roundedRect(M,y,PW-2*M,30,3,3,"F");
+ const detail=[["Quote #",q.quoteNo||"-"],["Date",new Date().toLocaleDateString("en-AU")],["Valid for",q.quoteValidity+" days"],["Customer",q.customer||"-"],["Phone",q.phone||"-"],["Email",q.email||"-"],["Location",q.suburb||q.city],["Doors",String(q.doors.length)]];
+ detail.forEach(function(r,i){const col=i%4,row=Math.floor(i/4),x=M+5+col*43.5,yy=y+7+row*12;doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor.apply(doc,muted);doc.text(r[0],x,yy);doc.setFont("helvetica","bold");doc.setFontSize(8.4);doc.setTextColor.apply(doc,ink);doc.text(String(r[1]).slice(0,23),x,yy+4.5)});y+=39;
+ q.doors.forEach(function(d,i){
+   ensure(49);doc.setFillColor.apply(doc,navy);doc.roundedRect(M,y,PW-2*M,8,2,2,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text("DOOR "+(i+1)+" — "+String(d.type||"").toUpperCase(),M+4,y+5.5);doc.setTextColor.apply(doc,yellow);doc.text(pdfMoney(d.issue)+" incl. GST",PW-M-4,y+5.5,{align:"right"});y+=11;
+   doc.setDrawColor.apply(doc,line);doc.setFillColor(255,255,255);doc.roundedRect(M,y,PW-2*M,31,2,2,"FD");
+   const left=M+5,right=M+95,rowsL=[["Width",d.w+" mm"],["Height",d.h+" mm"],["Colour",d.colour],["Profile / style",d.profile]],rowsR=[["Motor",d.motor],["Removal",d.removal?"Included":"Not included"],["Extras",(d.addonItems||[]).length+" item(s)"],["Installation","Supply & install"]];
+   rowsL.forEach(function(r,j){const yy=y+6+j*6.3;doc.setFont("helvetica","normal");doc.setFontSize(7.6);doc.setTextColor.apply(doc,muted);doc.text(r[0],left,yy);doc.setFont("helvetica","bold");doc.setTextColor.apply(doc,ink);doc.text(String(r[1]||"-").slice(0,38),left+25,yy)});
+   rowsR.forEach(function(r,j){const yy=y+6+j*6.3;doc.setFont("helvetica","normal");doc.setFontSize(7.6);doc.setTextColor.apply(doc,muted);doc.text(r[0],right,yy);doc.setFont("helvetica","bold");doc.setTextColor.apply(doc,ink);doc.text(String(r[1]||"-").slice(0,31),right+28,yy)});y+=37
+ });
+ ensure(20);doc.setTextColor.apply(doc,ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE ITEMS",M,y);y+=5;
+ const cols={desc:M,qty:148,amt:PW-M};
+ function tableHead(){doc.setFillColor.apply(doc,navy);doc.rect(M,y,PW-2*M,9,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(8.3);doc.text("DESCRIPTION",M+4,y+6);doc.text("QTY",cols.qty,y+6,{align:"center"});doc.text("AMOUNT",cols.amt-4,y+6,{align:"right"});y+=9}
+ function tableEnsure(h){if(y+h>255){y=newPage();tableHead()}}
+ tableHead();let rowNo=0;
+ q.doors.forEach(function(d,di){
+   const extraRetail=(d.addonItems||[]).reduce(function(a,i){return a+(+i.totalRetail||0)},0)+(d.removalRetail||0),baseRetail=Math.max(0,d.issue-extraRetail),rows=[{d:"Door "+(di+1)+" — "+d.type+" garage door supply & installation",q:1,a:baseRetail}];
+   (d.addonItems||[]).forEach(function(i){rows.push({d:"Door "+(di+1)+" extra — "+(i.displayName||i.name),q:i.qty||1,a:i.totalRetail||0})});
+   if(d.removalRetail)rows.push({d:"Door "+(di+1)+" — removal & disposal of existing garage door",q:1,a:d.removalRetail});
+   rows.forEach(function(r){tableEnsure(11);if(rowNo++%2===0){doc.setFillColor.apply(doc,light);doc.rect(M,y,PW-2*M,10,"F")}doc.setTextColor.apply(doc,ink);doc.setFont("helvetica","normal");doc.setFontSize(8.2);const desc=doc.splitTextToSize(r.d,116);doc.text(desc,M+4,y+6);doc.text(String(r.q),cols.qty,y+6,{align:"center"});doc.setFont("helvetica","bold");doc.text(pdfMoney(r.a),cols.amt-4,y+6,{align:"right"});y+=Math.max(10,desc.length*4+3)})
+ });
+ ensure(38);y+=4;const ex=q.issue/gst,gstAmt=q.issue-ex;doc.setDrawColor.apply(doc,line);doc.line(120,y,PW-M,y);y+=7;doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor.apply(doc,muted);doc.text("Subtotal ex GST",153,y,{align:"right"});doc.setTextColor.apply(doc,ink);doc.text(pdfMoney(ex),PW-M,y,{align:"right"});y+=7;doc.setTextColor.apply(doc,muted);doc.text("GST",153,y,{align:"right"});doc.setTextColor.apply(doc,ink);doc.text(pdfMoney(gstAmt),PW-M,y,{align:"right"});y+=8;doc.setFillColor.apply(doc,yellow);doc.roundedRect(119,y-5,PW-M-119,14,2,2,"F");doc.setTextColor.apply(doc,navy);doc.setFont("helvetica","bold");doc.setFontSize(12);doc.text("TOTAL",153,y+3.5,{align:"right"});doc.text(pdfMoney(q.issue),PW-M,y+3.5,{align:"right"});y+=22;
+ const notes=q.doors.map(function(d,i){return d.notes?"Door "+(i+1)+": "+d.notes:""}).filter(Boolean);
+ if(notes.length){ensure(28);doc.setTextColor.apply(doc,ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("NOTES",M,y);y+=5;doc.setFont("helvetica","normal");doc.setFontSize(8.4);doc.setTextColor.apply(doc,muted);notes.forEach(function(n){const a=doc.splitTextToSize("• "+n,PW-2*M);doc.text(a,M,y);y+=a.length*4.1+2})}
+ ensure(38);doc.setTextColor.apply(doc,ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE INFORMATION",M,y);y+=6;doc.setFont("helvetica","normal");doc.setFontSize(8.2);doc.setTextColor.apply(doc,muted);
+ ["This quotation is valid for "+q.quoteValidity+" days.","All prices shown include GST unless stated otherwise.","Final manufacture/order is based on the confirmed width, height, colour and profile shown for each door.","Any additional work not listed in this quotation requires approval before proceeding."].forEach(function(t){const a=doc.splitTextToSize("• "+t,PW-2*M);doc.text(a,M,y);y+=a.length*4.1+2});
+ doc.setDrawColor.apply(doc,yellow);doc.setLineWidth(.8);doc.line(M,279,PW-M,279);doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor.apply(doc,ink);doc.text(S.businessName,M,285);doc.setFont("helvetica","normal");doc.setTextColor.apply(doc,muted);doc.text([q.businessPhone,q.businessEmail,q.businessWebsite].filter(Boolean).join(" • ").slice(0,105),M,290);
  return doc.output("blob")
 }
 function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500)}
-async function downloadPdfQuote(){const q=calc(),blob=await buildPdfQuote();if(!blob)return;downloadBlob(blob,pdfFileName(q));toast("PDF downloaded")}
-async function sharePdfQuote(){const q=calc(),blob=await buildPdfQuote();if(!blob)return;const file=new File([blob],pdfFileName(q),{type:"application/pdf"});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){try{await navigator.share({title:`${S.businessName} Quote ${q.quoteNo}`,files:[file]});return}catch(e){if(e?.name==="AbortError")return}}downloadBlob(blob,pdfFileName(q));toast("PDF downloaded - attach it to WhatsApp or email")}
+async function downloadPdfQuote(){const q=getFullQuote(),blob=await buildPdfQuote();if(!blob)return;downloadBlob(blob,pdfFileName(q));toast("PDF downloaded")}
+async function sharePdfQuote(){const q=getFullQuote(),blob=await buildPdfQuote();if(!blob)return;const file=new File([blob],pdfFileName(q),{type:"application/pdf"});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){try{await navigator.share({title:`${S.businessName} Quote ${q.quoteNo}`,files:[file]});return}catch(e){if(e?.name==="AbortError")return}}downloadBlob(blob,pdfFileName(q));toast("PDF downloaded - attach it to WhatsApp or email")}
 function printable(autoPrint=true){const q=calc(),scr=safe($("summary").textContent),contact=[q.businessPhone,q.businessEmail,q.businessWebsite].filter(Boolean).map(safe).join(" • ");return`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(q.quoteNo)}</title><style>body{font-family:Arial;color:#152536;padding:40px;max-width:820px;margin:auto}.head{background:#0b1f33;color:white;padding:24px;border-radius:16px}.contact{opacity:.8;margin-top:6px}.price{font-size:36px;font-weight:900;margin:26px 0;color:#174b2d}.box{border:1px solid #d8e0ea;border-radius:12px;padding:20px;line-height:1.7;white-space:pre-wrap}.foot{margin-top:25px;color:#687386;font-size:12px}@media(max-width:600px){body{padding:18px}}</style></head><body><div class="head"><img src="brand-logo.svg" style="width:210px;max-width:60%;height:auto"><div style="font-size:24px;font-weight:900;margin-top:8px">${safe(S.businessName)}</div><div>Supply & Installation Quote • ${safe(q.city)}</div><div class="contact">${contact}</div></div><div class="price">${q.issue?money(q.issue)+" incl. GST":"Office review required"}</div><div class="box">${scr}</div><div class="foot">Quote valid for ${safe(S.quoteValidity)} days.</div>${autoPrint?'<script>window.onload=()=>window.print()<\\/script>':""}</body></html>`}
 function printQuote(){const w=window.open("","_blank");if(!w)return toast("Allow pop-ups");w.document.write(printable(true));w.document.close()}
 function saveQuote(){const q=calc(),a=JSON.parse(localStorage.getItem("bob_v3_quotes")||"[]");a.unshift({...q,date:new Date().toISOString()});localStorage.setItem("bob_v3_quotes",JSON.stringify(a.slice(0,300)));toast("Quote saved")}
