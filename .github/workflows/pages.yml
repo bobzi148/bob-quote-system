@@ -23,6 +23,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Validate app JavaScript
+        run: node --check app.js
+      - name: Validate required UI hooks
+        run: |
+          grep -q 'id="extraChoice"' index.html
+          grep -q 'id="doorItems"' index.html
+          grep -q 'BOB Quotes v10' index.html
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:
