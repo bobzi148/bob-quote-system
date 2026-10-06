@@ -258,29 +258,29 @@ function addCurrentDoor(){
  quoteDoors.push(structuredCloneSafe(q));clearCurrentDoor();saveDraft();calc();toast("Door added — start the next door")
 }
 function clearCurrentDoor(){
- $("doorType").value="Sectional";$("supplier").value="Auto";$("width").value="";$("height").value="";$("motor").value="Standard Motor";$("removal").value="No";$("notes").value="";$("finalOffer").value="";
+ $("doorType").value="Sectional";$("supplier").value="Auto";$("width").value="";$("height").value="";$("motor").value="Standard Motor";$("removal").value="No";if($("specialLift"))$("specialLift").value="No";if($("siteMeasure"))$("siteMeasure").value="No";$("notes").value="";$("finalOffer").value="";
  currentExtras=[];populateColourProfile(false);renderAddons(false)
 }
 function editDoor(i){
  const d=quoteDoors[i];if(!d)return;
  const current=calc();if(doorStarted(current)&&!confirm("Replace the current unfinished door with Door "+(i+1)+"?"))return;
- quoteDoors.splice(i,1);$("doorType").value=d.type;$("supplier").value=d.supplier;$("width").value=d.w;$("height").value=d.h;$("motor").value=(d.motor==="JayTech"||d.motor==="Superlift")?"Standard Motor":d.motor;$("removal").value=d.removal?"Yes":"No";$("notes").value=d.notes||"";$("finalOffer").value=d.issue&&d.issue!==d.recommended?d.issue:"";
+ quoteDoors.splice(i,1);$("doorType").value=d.type;$("supplier").value=d.supplier;$("width").value=d.w;$("height").value=d.h;$("motor").value=(d.motor==="JayTech"||d.motor==="Superlift")?"Standard Motor":d.motor;$("removal").value=d.removal?"Yes":"No";if($("specialLift"))$("specialLift").value=d.specialLift?"Yes":"No";if($("siteMeasure"))$("siteMeasure").value=d.siteMeasure?"Yes":"No";$("notes").value=d.notes||"";$("finalOffer").value=d.issue&&d.issue!==d.recommended?d.issue:"";
  populateColourProfile(false);$("doorColour").value=d.colour||"";$("doorProfile").value=d.profile||"";
- currentExtras=(d.addonItems||[]).map(function(x){return Object.assign({},x,{uid:x.uid||uid(),manualRetail:x.manualRetail!==false})});
+ currentExtras=(d.addonItems||[]).map(function(x){return Object.assign({},x,{uid:x.uid||uid()})});
  renderAddons(false);saveDraft();calc();window.scrollTo({top:0,behavior:"smooth"})
 }
 function removeDoor(i){if(!quoteDoors[i])return;if(confirm("Remove Door "+(i+1)+" from this quote?")){quoteDoors.splice(i,1);saveDraft();calc()}}
 function safeWrite(key,value){try{const prev=localStorage.getItem(key);if(prev!==null)localStorage.setItem(key+"_backup",prev);localStorage.setItem(key,value)}catch(e){}}
 function saveDraft(){
  if(new URLSearchParams(location.search).get("quote"))return;
- const ids=["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","notes","finalOffer"],fields={};
+ const ids=["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","specialLift","siteMeasure","notes","finalOffer"],fields={};
  ids.forEach(function(id){if($(id))fields[id]=$(id).value});
  safeWrite(DRAFT_KEY,JSON.stringify({version:APP_VERSION,fields:fields,currentExtras:currentExtras,quoteDoors:quoteDoors,updatedAt:new Date().toISOString()}))
 }
 function restoreDraft(){
  try{
   const d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");if(!d||!d.fields)return false;
-  ["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","motor","removal","notes","finalOffer"].forEach(function(id){if($(id)&&d.fields[id]!==undefined)$(id).value=d.fields[id]});
+  ["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","motor","removal","specialLift","siteMeasure","notes","finalOffer"].forEach(function(id){if($(id)&&d.fields[id]!==undefined)$(id).value=d.fields[id]});
   populateColourProfile(false);if(d.fields.doorColour!==undefined)$("doorColour").value=d.fields.doorColour;if(d.fields.doorProfile!==undefined)$("doorProfile").value=d.fields.doorProfile;
   currentExtras=Array.isArray(d.currentExtras)?d.currentExtras:[];quoteDoors=Array.isArray(d.quoteDoors)?d.quoteDoors:[];
   return true
@@ -405,23 +405,24 @@ async function repairApp(){
  }catch(e){}
  const p=new URLSearchParams(location.search);p.delete("quote");p.set("fresh",Date.now());if(ROLE_LOCK)p.set("role",ROLE_LOCK);location.replace(location.pathname+"?"+p.toString())
 }
+function toggleBrisbaneInstallFields(){document.querySelectorAll(".brisbane-install").forEach(function(el){el.style.display=$("city")&&$("city").value==="Brisbane"?"flex":"none"})}
 function healthCheck(){
- const ids=["builder","prices","addons","extraChoice","extraPrice","doorItems","summary","recommended"],missing=ids.filter(function(id){return !$(id)});
+ const ids=["builder","prices","addons","extraChoice","extraCost","extraPrice","doorItems","summary","recommended"],missing=ids.filter(function(id){return !$(id)});
  if(missing.length){localStorage.setItem("bob_last_error","Missing UI: "+missing.join(","));return false}
  return true
 }
 function bindInputs(){
  ["plCity","plDoor","plSupplier","plMotor"].forEach(function(x){if($(x))$(x).addEventListener("change",renderPrices)});
  ["catSupplier","catDoor","catWidth","catHeight"].forEach(function(x){if($(x))$(x).addEventListener("input",renderCatalog)});
- ["city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","notes","finalOffer","customer","phone","email","suburb","quoteNo"].forEach(function(x){if($(x))$(x).addEventListener("input",function(){
+ ["city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","specialLift","siteMeasure","notes","finalOffer","customer","phone","email","suburb","quoteNo"].forEach(function(x){if($(x))$(x).addEventListener("input",function(){
    if(["doorType","supplier","width","height"].includes(x)){populateColourProfile(true);renderAddons(true)}
-   if(x==="city")refreshHeaderContact();calc();saveDraft()
+   if(x==="city"){refreshHeaderContact();toggleBrisbaneInstallFields()}calc();saveDraft()
  })})
 }
 async function registerAppWorker(){
  if(!("serviceWorker" in navigator)||location.protocol==="file:")return;
  try{
-   const reg=await navigator.serviceWorker.register("./sw.js?v=10");await reg.update();
+   const reg=await navigator.serviceWorker.register("./sw.js?v=14");await reg.update();
    let reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload()})
  }catch(e){}
 }
@@ -431,7 +432,7 @@ function bootApp(){
  loadSettingsUI();const restored=restoreDraft();
  if(!restored){$("quoteNo").value=qno();$("city").value="Perth";populateColourProfile(false)}else populateColourProfile(true);
  const initialMode=ROLE_LOCK||localStorage.getItem("bob_v3_mode")||"office";setMode(initialMode,true);
- bindInputs();renderAddons(false);renderPrices();renderCatalog();refreshHeaderContact();calc();saveDraft();registerAppWorker()
+ bindInputs();toggleBrisbaneInstallFields();renderAddons(false);renderPrices();renderCatalog();refreshHeaderContact();calc();saveDraft();registerAppWorker()
 }
 function encodeQuote(q){const raw=encodeURIComponent(JSON.stringify(q));return btoa(unescape(raw)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
 function decodeQuote(x){try{let v=x.replace(/-/g,"+").replace(/_/g,"/");while(v.length%4)v+="=";return JSON.parse(decodeURIComponent(escape(atob(v))))}catch(e){return null}}
