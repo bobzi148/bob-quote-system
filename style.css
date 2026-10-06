@@ -38,7 +38,7 @@ body.admin .addon-cost.admin-only{display:block!important}
 
 /* v10 builder */
 .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin:2px 0 10px}.section-head .sub{margin:4px 0 0}
-.extra-composer{display:grid;grid-template-columns:1.5fr 1.3fr 1fr .55fr 1fr auto;gap:9px;align-items:end;margin-top:10px;padding:12px;border:1px solid var(--l);border-radius:14px;background:#f8fbff}
+.extra-composer{display:grid;grid-template-columns:1.35fr .9fr 1.2fr 1fr .55fr 1fr auto;gap:9px;align-items:end;margin-top:10px;padding:12px;border:1px solid var(--l);border-radius:14px;background:#f8fbff}
 .extra-add-field .btn{width:100%;min-height:42px}
 .extra-items{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .extra-item{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(100px,.7fr) 70px 130px 38px;gap:8px;align-items:center;padding:11px 12px;border:1px solid var(--l);border-radius:12px;background:#fff}
@@ -59,3 +59,5 @@ body.role-locked .role-switch{display:none!important}
 .public-door h2{margin:0;padding:12px 15px;background:#f3f6fa;color:#0b1f33;font-size:15px}
 .public-door .public-grid{border-top:1px solid #e2e8f0}
 .public-door-total{padding:12px 15px;text-align:right;font-weight:1000;color:#123d24;background:#f9fcfa;border-top:1px solid #e2e8f0}
+
+.internal-cost{background:#f1f4f7!important;color:#465364;font-weight:800}.internal-cost:not([readonly]){background:#fff8e8!important}
