@@ -1,6 +1,6 @@
 const DFLT={gst:10,targetMargin:1350,minMargin:1200,addonMarkup:0,removalRetail:200,jayCost:215,superCost:280,merlinCost:420,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
-const APP_VERSION="v10", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
+const APP_VERSION="v11", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
 const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
 let currentExtras=[],quoteDoors=[];
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
@@ -67,7 +67,9 @@ function defs(sup,type,w,h){
   ["matt","Colorbond Matt","check",()=>w<=3500?220:332],["wood","Colorbond Premium Woodlook","check",()=>w<=3500?220:368],["ranch","Ranch window insert","qty",()=>144],["stan","Stanford window insert","qty",()=>92],["herit","Heritage window insert","qty",()=>73],["tap","Taper","check",()=>w<=3500?159:258],["pel250","250mm × 55mm pelmet","check",()=>156],["pel200","200mm pelmet + Quick Closers","check",()=>220],["coast","Coastal upgrade","check",()=>557],["ins","Mammoth insulation","check",()=>insulation(w,h)],["j12524","Jamb pair 125×70×2400","check",()=>152],["j12530","Jamb pair 125×70×3000","check",()=>183],["j15024","Jamb pair 150×70×2400","check",()=>158],["j15030","Jamb pair 150×70×3000","check",()=>193],["c12524","Cover pair 125×70×2400","check",()=>83],["c12530","Cover pair 125×70×3000","check",()=>97],["c15024","Cover pair 150×70×2400","check",()=>86],["c15030","Cover pair 150×70×3000","check",()=>100]
  ];
  if(sup==="Centurion"&&type==="Sectional")return[
-  ["side","Side track seals","check",()=>33],["reg","Regency window insert","qty",()=>86],["geo","Georgian window insert","qty",()=>170],["tap","Taper hinged >40mm","check",()=>134*lm(w)],["timba","Timbalook Premium finish","check",()=> (h<=2330?111:h<=2910?139:166)*lm(w)],["flex","Flexographic finish","check",()=>53*sqm(w,h)],["pow","Powdercoat finish","check",()=>53*sqm(w,h)],["weather","Oversize weather seal","check",()=>8*lm(w)],["lhr","Low headroom kit","check",()=>89]
+  ["side","Side track seals","check",()=>33],["reg","Regency window insert","qty",()=>86],["geo","Georgian window insert","qty",()=>170],["tap","Taper hinged >40mm","check",()=>134*lm(w)],["timba","Timbalook Premium finish","check",()=> (h<=2330?111:h<=2910?139:166)*lm(w)],["flex","Flexographic finish","check",()=>53*sqm(w,h)],["pow","Powdercoat finish","check",()=>53*sqm(w,h)],["weather","Oversize weather seal","check",()=>8*lm(w)],["lhr","Low headroom kit","check",()=>89],
+  ["pel250","250mm × 55mm pelmet","check",()=>156,"Steel-Line"],["pel200","200mm pelmet + Quick Closers","check",()=>220,"Steel-Line"],
+  ["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line"],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line"],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line"],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line"]
  ];
  if(sup==="Steel-Line"&&type==="Roller")return[
   ["matt","Colorbond Matt","check",()=>w<=3100?184:272],["rev","Reverse rolled","check",()=>w<=3100?110:125],["aa","AA track upgrade","check",()=>w<=3100?174:null],["pel","300mm pelmet","check",()=>w<=3100?105:113],["tap","Taper","check",()=>w<=3000?189:262],["j12524","Jamb pair 125×70×2400","check",()=>152],["j12530","Jamb pair 125×70×3000","check",()=>183],["j15024","Jamb pair 150×70×2400","check",()=>158],["j15030","Jamb pair 150×70×3000","check",()=>193],["c12524","Cover pair 125×70×2400","check",()=>83],["c12530","Cover pair 125×70×3000","check",()=>97],["c15024","Cover pair 150×70×2400","check",()=>86],["c15030","Cover pair 150×70×3000","check",()=>100],["shoot","Shoot bolts pair","check",()=>37],["lock","Centre lock","check",()=>48],["ember","Ember brush seal top","check",()=>201]
@@ -112,7 +114,7 @@ function renderAddons(preserve){
  $("addonMessage").textContent=selectedSup==="Auto"
    ? "Auto mode is using "+sup+" add-on pricing for this "+(w||"—")+" × "+(h||"—")+" mm door. Add as many separate extras as needed."
    : sup+" add-ons recalculate live from the current "+(w||"—")+" × "+(h||"—")+" mm door size.";
- $("extraChoice").innerHTML='<option value="">Select extra</option>'+ds.map(function(d){return '<option value="'+d[0]+'">'+d[1]+'</option>'}).join("")+'<option value="__custom">Custom extra / product</option>';
+ $("extraChoice").innerHTML='<option value="">Select extra</option>'+ds.map(function(d){return '<option value="'+d[0]+'">'+d[1]+(d[4]?" — "+d[4]+" accessory":"")+'</option>'}).join("")+'<option value="__custom">Custom extra / product</option>';
  if(Array.from($("extraChoice").options).some(function(o){return o.value===oldChoice}))$("extraChoice").value=oldChoice;
  $("extraChoice").onchange=function(){$("extraPrice").dataset.manual="0";refreshExtraComposerPrice()};
  $("extraPrice").oninput=function(){$("extraPrice").dataset.manual="1"};
@@ -141,7 +143,7 @@ function addExtraItem(){
  }else{
    const d=defs(sup,type,w,h).find(function(x){return x[0]===choice});if(!d)return toast("Extra is not available for this door");
    const c=d[3]();if(c==null)return toast("This extra needs office pricing review");
-   item={uid:uid(),presetId:d[0],name:d[1],measure:measure,qty:qty,unitCost:c,unitRetail:unitRetail||addonSuggestedRetail(c),manualRetail:$("extraPrice").dataset.manual==="1",sourceSupplier:sup,needsReview:false}
+   item={uid:uid(),presetId:d[0],name:d[1],measure:measure,qty:qty,unitCost:c,unitRetail:unitRetail||addonSuggestedRetail(c),manualRetail:$("extraPrice").dataset.manual==="1",sourceSupplier:d[4]||sup,needsReview:false}
  }
  currentExtras.push(item);
  $("extraChoice").value="";$("extraDescription").value="";$("extraMeasure").value="";$("extraQty").value=1;$("extraPrice").value="";$("extraPrice").dataset.manual="0";
