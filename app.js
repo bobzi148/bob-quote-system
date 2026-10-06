@@ -1,6 +1,6 @@
-const DFLT={gst:10,targetMargin:1350,minMargin:1200,addonMarkup:0,removalRetail:200,jayCost:215,superCost:280,merlinCost:420,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
+const DFLT={gst:10,targetMargin:1500,minMargin:1200,addonMarkup:0,removalRetail:200,jayCost:215,superCost:280,merlinCost:420,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
-const APP_VERSION="v11", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
+const APP_VERSION="v12", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
 const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
 let currentExtras=[],quoteDoors=[];
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
@@ -9,7 +9,18 @@ const centA={w:[[900,1500],[1501,2000],[2001,2490],[2491,2650],[2651,2800],[2801
 const centAA={w:[[3101,3400],[3401,3760],[3761,4370],[4371,5100],[5101,5400]],h:[2100,2400,2600,3000],p:[[1132,1191,1359,1494,1523],[1196,1258,1454,1574,1617],[1211,1275,1472,1592,1636],[1215,1293,1488,1608,1654]]};
 const steelRoll={w:[[750,2150],[2155,2650],[2655,2850],[2855,3150],[3155,3250],[3255,3430],[3435,3760],[3765,4370],[4375,5100]],rows:[{h:2100,p:[591,682,810,877,null,null,null,null,null]},{h:2600,p:[674,739,924,963,1149,1279,1422,1483,1542]},{h:3000,p:[821,1012,1070,1101,1295,1462,1592,1722,1851]}]};
 const $=id=>document.getElementById(id), money=n=>n==null?"—":"$"+Math.round(+n).toLocaleString("en-AU"), ceil50=n=>Math.ceil(n/50)*50, norm5=n=>Math.ceil(+n/5)*5;
-function loadSettings(){try{return {...DFLT,...JSON.parse(localStorage.getItem("bob_v3_settings")||"{}")}}catch(e){return {...DFLT}}}
+function loadSettings(){
+ try{
+   const raw=JSON.parse(localStorage.getItem("bob_v3_settings")||"{}"),merged={...DFLT,...raw},migration=+(localStorage.getItem("bob_settings_migration_version")||0);
+   if(migration<12){
+     merged.minMargin=1200;
+     if(raw.targetMargin===undefined||+raw.targetMargin===1350)merged.targetMargin=1500;
+     localStorage.setItem("bob_v3_settings",JSON.stringify(merged));
+     localStorage.setItem("bob_settings_migration_version","12");
+   }
+   return merged
+ }catch(e){return {...DFLT}}
+}
 let deferredInstallPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstallPrompt=e});
 const STANDARD_COLOURS=["","Basalt","Bluegum","Classic Cream","Cove","Deep Ocean","Dover White","Dune","Evening Haze","Gully","Hamptons White","Ironstone","Jasper","Monument","Night Sky","Paperbark","Shale Grey","Southerly","Surfmist","Wallaby","Windspray","Woodland Grey","Other / confirm with supplier"];
