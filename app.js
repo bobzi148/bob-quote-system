@@ -1,5 +1,8 @@
 const DFLT={gst:10,targetMargin:1350,minMargin:1200,addonMarkup:0,removalRetail:200,jayCost:215,superCost:280,merlinCost:420,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
+const APP_VERSION="v10", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
+const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
+let currentExtras=[],quoteDoors=[];
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
 const centSec={w:[[1500,2450],[2451,3000],[3001,3500],[3501,4300],[4301,4800],[4801,4880],[4881,5150],[5151,5565],[5566,5960],[5961,6200]],h:[[1860,2330],[2331,2440],[2441,2730],[2731,2910],[2911,3170],[3171,3425]],p:[[992,1053,1079,1244,1316,1416,1510,1638,2153,2265],[995,1067,1144,1426,1503,1551,1596,1715,2188,2300],[1034,1098,1308,1478,1583,1623,1658,1768,2236,2352],[1299,1374,1665,1866,2118,2175,2278,2453,2866,3011],[1343,1424,1713,1913,2164,2220,2324,2499,2909,3056],[1596,1689,2032,2274,2571,2637,2759,2968,3461,3634]]};
 const centA={w:[[900,1500],[1501,2000],[2001,2490],[2491,2650],[2651,2800],[2801,3100]],h:[2100,2200,2400,2600,3000],p:[[592,603,612,665,720,776],[612,630,663,720,780,836],[645,663,686,759,789,822],[674,687,740,833,879,928],[735,806,844,878,950,1024]]};
@@ -83,45 +86,99 @@ function effectiveAddonSupplier(sup,type,w,h){
  if(c.Centurion)return "Centurion";
  return "Steel-Line";
 }
-function resetAddonRetail(id){const e=document.querySelector(`[data-addon-retail="${id}"]`);if(!e)return;const c=+e.dataset.suggested||0;e.value=c;e.dataset.manual="0";calc()}
-function renderAddons(preserve=true){
- const selectedSup=$("supplier").value,type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier(selectedSup,type,w,h),old={};
- if(preserve)document.querySelectorAll("[data-addon-row]").forEach(row=>{
-   const id=row.dataset.addonRow,select=row.querySelector("[data-addon-select]"),qty=row.querySelector("[data-addon-qty]"),retail=row.querySelector("[data-addon-retail]");
-   old[id]={selected:!!select?.checked,qty:qty?.value||0,retail:retail?.value||"",manual:retail?.dataset.manual==="1"};
- });
- $("addonMessage").textContent=selectedSup==="Auto"
-   ? "Auto supplier mode: showing "+sup+" add-ons for this "+w+" × "+h+" mm door. Prices recalculate live and can be overridden."
-   : sup+" add-ons recalculate live from the current "+w+" × "+h+" mm door size. Suggested sell price includes GST and can be overridden.";
- $("addonControls").innerHTML=defs(sup,type,w,h).map(d=>{
-   const c=d[3](),suggested=addonSuggestedRetail(c),o=old[d[0]]||{},retail=o.manual?o.retail:suggested;
-   const supplierText=c==null?"Office review":money(c)+" ex GST";
-   const selector=d[2]==="qty"
-     ? `<div class="addon-qty-wrap"><label>Qty</label><input data-addon-qty="${d[0]}" type="number" min="0" step="1" value="${o.qty||0}"></div>`
-     : `<label class="check addon-check"><input data-addon-select="${d[0]}" type="checkbox" ${o.selected?"checked":""}><span>Add</span></label>`;
-   return `<div class="addon addon-live" data-addon-row="${d[0]}">
-     <div class="addon-info"><b>${d[1]}</b><div class="addon-cost admin-only">Supplier: ${supplierText}${d[2]==="qty"?" each":""}</div><div class="addon-dimension">Live for ${w} × ${h} mm</div></div>
-     <div class="addon-live-controls">${selector}<div class="addon-sell"><label>Sell incl. GST</label><div class="addon-sell-row"><span>$</span><input data-addon-retail="${d[0]}" data-suggested="${suggested}" data-manual="${o.manual?"1":"0"}" type="number" min="0" step="10" value="${retail}"><button type="button" class="mini-reset" onclick="resetAddonRetail('${d[0]}')">↺</button></div></div></div>
-   </div>`
- }).join("");
- document.querySelectorAll("[data-addon-select],[data-addon-qty]").forEach(e=>e.addEventListener("input",calc));
- document.querySelectorAll("[data-addon-retail]").forEach(e=>e.addEventListener("input",()=>{e.dataset.manual="1";calc()}));
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function activeAddonDefs(sourceSupplier){
+ const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0;
+ return defs(sourceSupplier||effectiveAddonSupplier($("supplier").value,type,w,h),type,w,h)
 }
+function repriceCurrentExtras(){
+ const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0;
+ currentExtras=currentExtras.map(function(item){
+   if(!item.presetId)return item;
+   const source=item.sourceSupplier||effectiveAddonSupplier($("supplier").value,type,w,h);
+   const d=defs(source,type,w,h).find(function(x){return x[0]===item.presetId});
+   if(!d)return Object.assign({},item,{unitCost:null,needsReview:true});
+   const c=d[3](),suggested=addonSuggestedRetail(c);
+   return Object.assign({},item,{name:d[1],sourceSupplier:source,unitCost:c,needsReview:c==null,unitRetail:item.manualRetail?item.unitRetail:suggested})
+ })
+}
+function renderAddons(preserve){
+ if(preserve===undefined)preserve=true;
+ if(!$("extraChoice"))return;
+ const selectedSup=$("supplier").value,type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier(selectedSup,type,w,h);
+ repriceCurrentExtras();
+ const oldChoice=preserve?$("extraChoice").value:"",ds=defs(sup,type,w,h);
+ $("addonMessage").textContent=selectedSup==="Auto"
+   ? "Auto mode is using "+sup+" add-on pricing for this "+(w||"—")+" × "+(h||"—")+" mm door. Add as many separate extras as needed."
+   : sup+" add-ons recalculate live from the current "+(w||"—")+" × "+(h||"—")+" mm door size.";
+ $("extraChoice").innerHTML='<option value="">Select extra</option>'+ds.map(function(d){return '<option value="'+d[0]+'">'+d[1]+'</option>'}).join("")+'<option value="__custom">Custom extra / product</option>';
+ if(Array.from($("extraChoice").options).some(function(o){return o.value===oldChoice}))$("extraChoice").value=oldChoice;
+ $("extraChoice").onchange=function(){$("extraPrice").dataset.manual="0";refreshExtraComposerPrice()};
+ $("extraPrice").oninput=function(){$("extraPrice").dataset.manual="1"};
+ refreshExtraComposerPrice();renderExtraItems()
+}
+function refreshExtraComposerPrice(){
+ if(!$("extraChoice"))return;
+ const choice=$("extraChoice").value;
+ if(!choice){if($("extraPrice").dataset.manual!=="1")$("extraPrice").value="";return}
+ if(choice==="__custom"){if($("extraPrice").dataset.manual!=="1")$("extraPrice").value="";return}
+ const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h),d=defs(sup,type,w,h).find(function(x){return x[0]===choice});
+ if(!d)return;
+ const suggested=addonSuggestedRetail(d[3]());
+ if($("extraPrice").dataset.manual!=="1")$("extraPrice").value=suggested||""
+}
+function addExtraItem(){
+ const choice=$("extraChoice").value,qty=Math.max(1,+$("extraQty").value||1),measure=$("extraMeasure").value.trim(),unitRetail=+$("extraPrice").value||0;
+ if(!choice)return toast("Choose an extra first");
+ const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h);
+ let item;
+ if(choice==="__custom"){
+   const name=$("extraDescription").value.trim();
+   if(!name)return toast("Enter a description for the custom extra");
+   if(!unitRetail)return toast("Enter the sell price for the extra");
+   item={uid:uid(),presetId:null,name:name,measure:measure,qty:qty,unitCost:0,unitRetail:unitRetail,manualRetail:true,sourceSupplier:null,needsReview:false}
+ }else{
+   const d=defs(sup,type,w,h).find(function(x){return x[0]===choice});if(!d)return toast("Extra is not available for this door");
+   const c=d[3]();if(c==null)return toast("This extra needs office pricing review");
+   item={uid:uid(),presetId:d[0],name:d[1],measure:measure,qty:qty,unitCost:c,unitRetail:unitRetail||addonSuggestedRetail(c),manualRetail:$("extraPrice").dataset.manual==="1",sourceSupplier:sup,needsReview:false}
+ }
+ currentExtras.push(item);
+ $("extraChoice").value="";$("extraDescription").value="";$("extraMeasure").value="";$("extraQty").value=1;$("extraPrice").value="";$("extraPrice").dataset.manual="0";
+ renderAddons(false);calc();saveDraft();toast("Extra added")
+}
+function renderExtraItems(){
+ if(!$("extraItemsList"))return;
+ if(!currentExtras.length){$("extraItemsList").innerHTML='<div class="hint">No extras added to this door yet.</div>';return}
+ $("extraItemsList").innerHTML=currentExtras.map(function(i){
+   return '<div class="extra-item">'+
+   '<div><div class="extra-title">'+safe(i.name)+'</div><div class="extra-meta">'+(i.measure?safe(i.measure)+" • ":"")+(i.sourceSupplier?safe(i.sourceSupplier)+" • ":"")+(i.needsReview?"Office review":"Live priced")+'</div></div>'+
+   '<input aria-label="Size or measure" value="'+safe(i.measure||"")+'" onchange="updateExtraItem(\''+i.uid+'\',\'measure\',this.value)">'+
+   '<input aria-label="Quantity" type="number" min="1" step="1" value="'+(i.qty||1)+'" onchange="updateExtraItem(\''+i.uid+'\',\'qty\',this.value)">'+
+   '<input aria-label="Sell price" type="number" min="0" step="10" value="'+(i.unitRetail||0)+'" onchange="updateExtraItem(\''+i.uid+'\',\'unitRetail\',this.value)">'+
+   '<button class="remove-extra" title="Remove extra" onclick="removeExtraItem(\''+i.uid+'\')">×</button></div>'
+ }).join("")
+}
+function updateExtraItem(id,field,value){
+ const i=currentExtras.find(function(x){return x.uid===id});if(!i)return;
+ if(field==="qty")i.qty=Math.max(1,+value||1);
+ else if(field==="unitRetail"){i.unitRetail=+value||0;i.manualRetail=true}
+ else i[field]=value;
+ calc();saveDraft()
+}
+function removeExtraItem(id){currentExtras=currentExtras.filter(function(x){return x.uid!==id});renderExtraItems();calc();saveDraft()}
 function selectedAddons(){
- const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h),ds=defs(sup,type,w,h);
+ repriceCurrentExtras();
  let costTotal=0,retailTotal=0,names=[],items=[],review=false;
- ds.forEach(d=>{
-   const row=document.querySelector(`[data-addon-row="${d[0]}"]`);if(!row)return;
-   const qty=d[2]==="qty"?(+row.querySelector("[data-addon-qty]")?.value||0):(row.querySelector("[data-addon-select]")?.checked?1:0);
-   if(!qty)return;
-   const c=d[3](),retailEl=row.querySelector("[data-addon-retail]"),unitRetail=+retailEl?.value||0;
-   if(c==null){review=true;names.push(d[1]+" (review)");items.push({id:d[0],name:d[1],qty,unitCost:null,unitRetail,totalRetail:unitRetail*qty});return}
-   const itemCost=c*qty,totalRetail=unitRetail*qty;
+ currentExtras.forEach(function(i){
+   const qty=Math.max(1,+i.qty||1),c=i.unitCost,unitRetail=+i.unitRetail||0,itemCost=c==null?0:c*qty,totalRetail=unitRetail*qty;
+   if(c==null||i.needsReview)review=true;
    costTotal+=itemCost;retailTotal+=totalRetail;
-   names.push(d[1]+(qty>1?` ×${qty}`:""));
-   items.push({id:d[0],name:d[1],qty,unitCost:c,totalCost:itemCost,unitRetail,totalRetail});
+   const display=i.name+(i.measure?" — "+i.measure:"");
+   names.push(display+(qty>1?" ×"+qty:""));
+   items.push(Object.assign({},i,{qty:qty,totalCost:c==null?null:itemCost,totalRetail:totalRetail,displayName:display}))
  });
- return{total:costTotal,costTotal,retailTotal,names,items,review}
+ return{total:costTotal,costTotal:costTotal,retailTotal:retailTotal,names:names,items:items,review:review}
 }
 function qno(){const d=new Date(),p=n=>String(n).padStart(2,"0");return`BOB-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`}
 function calc(){
