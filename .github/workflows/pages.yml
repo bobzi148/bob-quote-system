@@ -29,7 +29,7 @@ jobs:
         run: |
           grep -q 'id="extraChoice"' index.html
           grep -q 'id="doorItems"' index.html
-          grep -q 'BOB Quotes v16' index.html
+          grep -q 'BOB Quotes v17' index.html
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:
