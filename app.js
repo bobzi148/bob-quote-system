@@ -1,6 +1,6 @@
 const DFLT={gst:10,targetMargin:1500,minMargin:1200,removalRetail:100,jayCost:215,jayRetail:450,superCost:280,superRetail:500,merlinCost:420,merlinRetail:650,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,bneRollerInstall:450,bneRollerRemove:550,bneSingleInstall:500,bneSingleRemove:600,bneMotorLabour:75,bneDoubleInstall:700,bneDoubleRemove:850,bneSpecialLift:300,bneDoubleWidth:3000,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
-const APP_VERSION="v17", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
+const APP_VERSION="v18", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
 const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
 let currentExtras=[],quoteDoors=[];
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
@@ -12,7 +12,7 @@ const $=id=>document.getElementById(id), money=n=>n==null?"—":"$"+Math.round(+
 function loadSettings(){
  try{
    const raw=JSON.parse(localStorage.getItem("bob_v3_settings")||"{}"),merged={...DFLT,...raw},migration=+(localStorage.getItem("bob_settings_migration_version")||0);
-   if(migration<17){
+   if(migration<18){
      merged.minMargin=1200;
      if(raw.targetMargin===undefined||+raw.targetMargin===1350)merged.targetMargin=1500;
      if(raw.jayRetail===undefined)merged.jayRetail=450;
@@ -20,7 +20,7 @@ function loadSettings(){
      if(raw.merlinRetail===undefined)merged.merlinRetail=650;
      if(raw.removalRetail===undefined||+raw.removalRetail===200)merged.removalRetail=100;
      localStorage.setItem("bob_v3_settings",JSON.stringify(merged));
-     localStorage.setItem("bob_settings_migration_version","17");
+     localStorage.setItem("bob_settings_migration_version","18");
    }
    return merged
  }catch(e){return {...DFLT}}
@@ -89,6 +89,18 @@ function installationCost(city,type,w,h,removal,motorName,specialLift){
  return{ok:true,cost:cost,label:label}
 }
 function motor(city,m){if(m==="Manual")return{name:"Manual",cost:0,retail:0};if(m==="Merlin")return{name:"Merlin",cost:S.merlinCost,retail:S.merlinRetail};return city==="Perth"?{name:"JayTech",cost:S.jayCost,retail:S.jayRetail}:{name:"Superlift",cost:S.superCost,retail:S.superRetail}}
+function profitModel(doorCost,labourCost,motorName,w,h,specialLift){
+ let target=750+0.30*(doorCost+labourCost);
+ if(motorName==="Merlin")target+=250;
+ else if(motorName!=="Manual")target+=150;
+ if(w>4500)target+=300;
+ else if(w>3000)target+=100;
+ if(h>2700)target+=100;
+ if(specialLift)target+=200;
+ target=Math.round(target/50)*50;
+ const minimum=Math.max(0,target-150);
+ return{target:target,minimum:minimum}
+}
 const lm=w=>w/1000,sqm=(w,h)=>w*h/1e6;
 function insulation(w,h){let wi=w<=3000?0:w<=5500?1:w<=6700?2:-1,hi=h<=2285?0:h<=2850?1:h<=3415?2:-1;return wi<0||hi<0?null:[[818,1039,1195],[1007,1290,1510],[1195,1447,1699]][hi][wi]}
 function boxCost(w){if(w<=2500)return 101;if(w<=2800)return 106;if(w<=3100)return 111;if(w<=3400)return 116;if(w<=3700)return 122;if(w<=4000)return 130;if(w<=4300)return 138;if(w<=4600)return 145;if(w<=4900)return 151;if(w<=5400)return 157;return null}
@@ -235,8 +247,8 @@ function calc(){
  let review=hasSize&&(!b.ok||!labour.ok||ad.review||!spec.ok),reason=!hasSize?"Enter door width and height":(!spec.ok?spec.reason:(!b.ok?(b.reason||"Size is outside automatic supplier pricing"):(!labour.ok?labour.label:(ad.review?"Selected extra needs cost/customer price review":""))));
  let rec=0,min=0;
  if(hasSize&&b.ok){
-   const gst=1+S.gst/100,pricingBase=b.cost+mi.retail+ta+(rem?S.removalRetail:0),extraRevenue=ad.retailTotal;
-   const baseMin=ceil50((pricingBase+S.minMargin)*gst),baseRec=Math.max(baseMin,floor50((pricingBase+S.targetMargin)*gst));
+   const gst=1+S.gst/100,pricingBase=b.cost+mi.retail+ta+(rem?S.removalRetail:0),extraRevenue=ad.retailTotal,pm=profitModel(b.cost,ta,mi.name,w,h,specialLift);
+   const baseMin=ceil50((pricingBase+pm.minimum)*gst),baseRec=ceil50((pricingBase+pm.target)*gst);
    min=baseMin+extraRevenue;
    rec=baseRec+extraRevenue
  }
@@ -246,11 +258,11 @@ function calc(){
  const baseProfit=hasSize&&b.ok&&issue?((issue-ad.retailTotal)/(1+S.gst/100)-b.cost-mi.retail-ta-(rem?S.removalRetail:0)):null;
  const extrasProfit=hasSize&&b.ok&&issue?(ad.retailTotal/(1+S.gst/100)-ad.costTotal):null;
  const margin=baseProfit==null?null:baseProfit+(extrasProfit||0);
- const q={quoteNo:$("quoteNo").value.trim(),customer:$("customer").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),suburb:$("suburb").value.trim(),city:city,type:type,supplier:sup,w:w,h:h,colour:spec.colour,profile:spec.profile,motor:mi.name,addons:ad.names.join("; "),addonItems:ad.items,addonCostTotal:ad.costTotal,addonRetailTotal:ad.retailTotal,removal:rem,removalRetail:rem?S.removalRetail:0,specialLift:specialLift,installationCost:ta,installationLabel:labour.label,motorRetail:mi.retail,customExtra:0,notes:$("notes").value.trim(),recommended:rec,minimum:min,issue:issue,status:hasSize&&!review?"APPROVED":"CALL OFFICE",margin:margin,baseProfit:baseProfit,extrasProfit:extrasProfit,businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity};
+ const q={quoteNo:$("quoteNo").value.trim(),customer:$("customer").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),suburb:$("suburb").value.trim(),city:city,type:type,supplier:sup,w:w,h:h,colour:spec.colour,profile:spec.profile,motor:mi.name,addons:ad.names.join("; "),addonItems:ad.items,addonCostTotal:ad.costTotal,addonRetailTotal:ad.retailTotal,removal:rem,removalRetail:rem?S.removalRetail:0,specialLift:specialLift,installationCost:ta,installationLabel:labour.label,motorRetail:mi.retail,customExtra:0,notes:$("notes").value.trim(),recommended:rec,minimum:min,issue:issue,status:hasSize&&!review?"APPROVED":"CALL OFFICE",margin:margin,baseProfit:baseProfit,extrasProfit:extrasProfit,targetProfit:(hasSize&&b.ok?profitModel(b.cost,ta,mi.name,w,h,specialLift).target:null),businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity};
  $("recommended").textContent=hasSize?(rec?money(rec):"REVIEW"):"—";$("minimum").textContent=min?money(min):"—";$("issue").textContent=issue?money(issue):"—";$("basisSupplier").textContent=hasSize&&b.ok?b.basis:"—";$("motorName").textContent=mi.name;
- $("steelCost").textContent=b.c&&b.c["Steel-Line"]?money(b.c["Steel-Line"].cost):"—";$("centCost").textContent=b.c&&b.c.Centurion?money(b.c.Centurion.cost):"—";$("addonCost").textContent=money(ad.costTotal);$("techCost").textContent=hasSize&&labour.ok?money(ta):"REVIEW";$("motorCost").textContent=money(mi.cost);$("margin").textContent=margin==null?"—":money(margin);$("margin").style.color=margin==null?"":margin<S.minMargin?"#b42318":"#177a3d";if($("baseProfit"))$("baseProfit").textContent=baseProfit==null?"—":money(baseProfit);if($("extrasProfit"))$("extrasProfit").textContent=extrasProfit==null?"—":money(extrasProfit);
+ $("steelCost").textContent=b.c&&b.c["Steel-Line"]?money(b.c["Steel-Line"].cost):"—";$("centCost").textContent=b.c&&b.c.Centurion?money(b.c.Centurion.cost):"—";$("addonCost").textContent=money(ad.costTotal);$("techCost").textContent=hasSize&&labour.ok?money(ta):"REVIEW";$("motorCost").textContent=money(mi.cost);$("margin").textContent=margin==null?"—":money(margin);$("margin").style.color=margin==null?"":margin<S.minMargin?"#b42318":"#177a3d";if($("targetProfit"))$("targetProfit").textContent=hasSize&&b.ok?money(profitModel(b.cost,ta,mi.name,w,h,specialLift).target):"—";if($("baseProfit"))$("baseProfit").textContent=baseProfit==null?"—":money(baseProfit);if($("extrasProfit"))$("extrasProfit").textContent=extrasProfit==null?"—":money(extrasProfit);
  const st=$("status");st.className="status "+(hasSize?(review?"bad":"good"):(quoteDoors.length?"good":"bad"));st.textContent=hasSize?(review?"CALL OFFICE — "+reason:"READY — current door can be quoted"):(quoteDoors.length?"READY — "+quoteDoors.length+" completed door(s) in quote":"ENTER CURRENT DOOR DETAILS");
- $("supplierAdvice").textContent=hasSize&&b.ok?(sup==="Auto"?"Auto uses the lowest available supplier cost. Current selected base supplier: "+b.recommended+" "+money(b.recommendedCost)+" ex GST.":"Pricing basis: "+sup+" "+money(b.cost)+" ex GST. Selected extras supplier cost: "+money(ad.costTotal)+" ex GST; customer extra line values: "+money(ad.retailTotal)+" incl. GST. Base door + motor target is $"+S.minMargin+"–$"+S.targetMargin+" profit ex GST. Every sold extra is added on top and increases total business profit."):"";
+ $("supplierAdvice").textContent=hasSize&&b.ok?(sup==="Auto"?"Auto uses the lowest available supplier cost. Current selected base supplier: "+b.recommended+" "+money(b.recommendedCost)+" ex GST.":"Pricing basis: "+sup+" "+money(b.cost)+" ex GST. Selected extras supplier cost: "+money(ad.costTotal)+" ex GST; customer extra line values: "+money(ad.retailTotal)+" incl. GST. Target profit is calculated dynamically from door cost, installation, motor and complexity. Every sold extra is added on top and increases total business profit."):"";
  const full=composeQuote(q);
  if($("wholeQuoteTotal"))$("wholeQuoteTotal").textContent=full.issue?money(full.issue):"—";if($("quoteTotal"))$("quoteTotal").textContent=money(full.issue||0);if($("quoteDoorsCount"))$("quoteDoorsCount").textContent=full.doors.length+" door"+(full.doors.length===1?"":"s")+" in quote";$("summary").textContent=quoteSummary(full);renderDoorItems();
  return q
@@ -384,8 +396,8 @@ function clearHistory(){if(confirm("Clear saved quotes?")){localStorage.removeIt
 function exportCSV(){const a=JSON.parse(localStorage.getItem("bob_v3_quotes")||"[]");if(!a.length)return toast("No saved quotes");const rows=[["Date","Quote","Customer","Phone","Email","Suburb","City","Door","Supplier","Width","Height","Motor","Add-ons","Notes","Price","Status","Margin"],...a.map(x=>[x.date,x.quoteNo,x.customer,x.phone,x.email,x.suburb,x.city,x.type,x.supplier,x.w,x.h,x.motor,x.addons,x.notes,x.issue,x.status,x.margin])],csv=rows.map(r=>r.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")).join("\n"),b=new Blob([csv],{type:"text/csv"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download="BOB_Quotes.csv";l.click()}
 function widths(type,sup){if(type==="Sectional")return sup==="Steel-Line"?[2400,3000,3500,4500,4800,5000,5300,5650,6200]:sup==="Centurion"?[2400,3000,3500,4300,4800,5150,5565,5960,6200]:[2400,3000,3500,4300,4500,4800,5000,5300,5650,5960,6200];return sup==="Steel-Line"?[1500,2150,2650,2850,3150,3250,3430,3760,4370,5100]:sup==="Centurion"?[1500,2000,2490,2650,2800,3100,3400,3760,4370,5100,5400]:[1500,2000,2150,2490,2650,2800,3100,3400,3760,4370,5100,5400]}
 function heights(type,sup){return type==="Sectional"?(sup==="Steel-Line"?[2100,2400,2700,3200]:[2100,2400,2700,2900,3150,3400]):[2100,2200,2400,2600,3000]}
-function recFor(city,type,sup,w,h,m){const b=base(type,w,h,sup);if(!b.ok)return null;const mi=motor(city,m),lab=installationCost(city,type,w,h,false,mi.name,false);if(!lab.ok)return null;const gst=1+S.gst/100,pricingBase=b.cost+mi.retail+lab.cost,min=ceil50((pricingBase+S.minMargin)*gst),price=Math.max(min,floor50((pricingBase+S.targetMargin)*gst));return{price:price,cost:b.cost,basis:b.basis}}
-function renderPrices(){const city=$("plCity").value,type=$("plDoor").value,sup=$("plSupplier").value,m=$("plMotor").value;let r="<tr><th>Height</th><th>Width</th><th>Customer price incl GST</th><th>Supplier basis</th><th class='admin-only'>Door cost ex GST</th></tr>";heights(type,sup).forEach(h=>widths(type,sup).forEach(w=>{const x=recFor(city,type,sup,w,h,m);if(x)r+=`<tr><td><b>${h} mm</b></td><td>${w} mm</td><td><b>${money(x.price)}</b></td><td>${x.basis}</td><td class="admin-only">${money(x.cost)}</td></tr>`}));$("priceTable").innerHTML=r}
+function recFor(city,type,sup,w,h,m){const b=base(type,w,h,sup);if(!b.ok)return null;const mi=motor(city,m),lab=installationCost(city,type,w,h,false,mi.name,false);if(!lab.ok)return null;const gst=1+S.gst/100,pricingBase=b.cost+mi.retail+lab.cost,pm=profitModel(b.cost,lab.cost,mi.name,w,h,false),price=ceil50((pricingBase+pm.target)*gst);return{price:price,cost:b.cost,basis:b.basis,targetProfit:pm.target}}
+function renderPrices(){const city=$("plCity").value,type=$("plDoor").value,sup=$("plSupplier").value,m=$("plMotor").value;let r="<tr><th>Height</th><th>Width</th><th>Customer price incl GST</th><th>Supplier basis</th><th class='admin-only'>Door cost ex GST</th><th class='admin-only'>Target profit ex GST</th></tr>";heights(type,sup).forEach(h=>widths(type,sup).forEach(w=>{const x=recFor(city,type,sup,w,h,m);if(x)r+=`<tr><td><b>${h} mm</b></td><td>${w} mm</td><td><b>${money(x.price)}</b></td><td>${x.basis}</td><td class="admin-only">${money(x.cost)}</td><td class="admin-only">${money(x.targetProfit)}</td></tr>`}));$("priceTable").innerHTML=r}
 const CAT={"Steel-Line|Sectional":[["Colorbond Premium woodlook","$220 ≤3500W / $368 >3500W","Per door"],["Colorbond Matt","$220 ≤3500W / $332 >3500W","Per door"],["Coastal upgrade","$557","Per door"],["Ranch window","$144","Per insert"],["Stanford window","$92","Per insert"],["Heritage window","$73","Per insert"],["Taper","$159 ≤3500W / $258 >3500W","Per door"],["Pelmet 250×55","$156","Each"],["200mm pelmet + Quick Closers","$220","Pair"],["Jamb pairs","$152–$193","By size"],["Cover pairs","$83–$100","By size"],["Mammoth insulation","$818–$1,699","By width/height"]],"Centurion|Sectional":[["Side track seals","$33","Per door"],["Regency window","$86","Per window"],["Georgian window","$170","Per window"],["Taper hinged >40mm","$134","Per lineal metre by width"],["Timbalook Premium","$111 / $139 / $166","Per lineal metre by width, height band"],["Flexographic finish","$53","Per m²"],["Powdercoat finish","$53","Per m²"],["Oversize weather seal","$8","Per lineal metre by width"],["Low headroom kit","$89","Per door"]],"Steel-Line|Roller":[["Colorbond Matt","$184 ≤3100W / $272 >3100W","Per door"],["Reverse rolled","$110 ≤3100W / $125 >3100W","Per door"],["AA track upgrade","$174","≤3100W"],["300mm pelmet","$105 ≤3100W / $113 >3100W","Per door"],["Taper","$189 ≤3000W / $262 >3000W","Per door"],["Jamb pairs","$152–$193","By size"],["Cover pairs","$83–$100","By size"],["Shoot bolts","$37","Pair"],["Centre lock","$48","Each"],["Ember brush seal","$201","Top only"]],"Centurion|Roller":[["Hard cardboard cylinder stretch","$20","Per lineal metre by width"],["Hard cardboard cylinder shrink","$27","Per lineal metre by width"],["Box a Door","$101–$157","By width"],["Premium Matt","$104 / $114 / $142 / $199","Per lineal metre by width, height band"],["Taper","$42","Per lineal metre by width"],["Reverse rolled","$105 Series A / $149 Series AA","Per door"],["Oversize weather seal","$8","Per lineal metre by width"]]};
 function renderCatalog(){
  const sup=$("catSupplier").value,type=$("catDoor").value,w=+$("catWidth").value||0,h=+$("catHeight").value||0,ds=defs(sup,type,w,h);
@@ -418,7 +430,7 @@ function healthCheck(){
 function bindInputs(){
  ["plCity","plDoor","plSupplier","plMotor"].forEach(function(x){if($(x))$(x).addEventListener("change",renderPrices)});
  ["catSupplier","catDoor","catWidth","catHeight"].forEach(function(x){if($(x))$(x).addEventListener("input",renderCatalog)});
- ["city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","specialLift","","notes","finalOffer","customer","phone","email","suburb","quoteNo"].forEach(function(x){if($(x))$(x).addEventListener("input",function(){
+ ["city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","specialLift","notes","finalOffer","customer","phone","email","suburb","quoteNo"].forEach(function(x){if($(x))$(x).addEventListener("input",function(){
    if(["doorType","supplier","width","height"].includes(x)){populateColourProfile(true);renderAddons(true)}
    if(x==="city"){refreshHeaderContact();toggleBrisbaneInstallFields()}calc();saveDraft()
  })})
@@ -426,7 +438,7 @@ function bindInputs(){
 async function registerAppWorker(){
  if(!("serviceWorker" in navigator)||location.protocol==="file:")return;
  try{
-   const reg=await navigator.serviceWorker.register("./sw.js?v=14");await reg.update();
+   const reg=await navigator.serviceWorker.register("./sw.js?v=18");await reg.update();
    let reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload()})
  }catch(e){}
 }
