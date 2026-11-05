@@ -37,8 +37,8 @@ const PROFILES={
  "Centurion|Sectional":["","Georgian","Regency","Mediterranean","Cosmopolitan"],
  "Auto|Sectional":["","Steel-Line — Stanford","Steel-Line — Heritage","Steel-Line — Ranch","Steel-Line — Fineline","Steel-Line — Ribline","Steel-Line — Flatline","Centurion — Georgian","Centurion — Regency","Centurion — Mediterranean","Centurion — Cosmopolitan"],
  "Steel-Line|Roller":["","Roller Door"],
- "Centurion|Roller":["","Series A / AA Roller Door"],
- "Auto|Roller":["","Roller Door"]
+ "Centurion|Roller":["","Series A / AA / B Roller Door"],
+ "Auto|Roller":["","Roller Door — A / AA / B auto"]
 };
 function cityContact(city){
  return city==="Perth"
@@ -173,7 +173,7 @@ function renderAddons(preserve){
  const selectedSup=$("supplier").value,type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier(selectedSup,type,w,h);
  repriceCurrentExtras();
  const oldChoice=preserve?$("extraChoice").value:"",ds=defs(sup,type,w,h);
- $("addonMessage").textContent=selectedSup==="Auto" ? "Auto mode is using "+sup+" internal cost pricing for this "+(w||"—")+" × "+(h||"—")+" mm door. Customer price must be entered manually." : sup+" internal add-on costs recalculate live from the current "+(w||"—")+" × "+(h||"—")+" mm door size. Customer price must be entered manually.";
+ $("addonMessage").textContent=selectedSup==="Auto" ? "Auto mode is using "+sup+" internal cost pricing for this "+(w||"—")+" × "+(h||"—")+" mm door. Fixed-price extras are prefilled; other extras require a customer price." : sup+" internal add-on costs recalculate live from the current "+(w||"—")+" × "+(h||"—")+" mm door size. Fixed-price extras are prefilled; other extras require a customer price.";
  $("extraChoice").innerHTML='<option value="">Select extra</option>'+ds.map(function(d){return '<option value="'+d[0]+'">'+d[1]+(d[4]?" — "+d[4]+" accessory":"")+'</option>'}).join("")+'<option value="__custom">Custom extra / product</option>';
  if(Array.from($("extraChoice").options).some(function(o){return o.value===oldChoice}))$("extraChoice").value=oldChoice;
  $("extraChoice").onchange=refreshExtraComposerCost;
@@ -252,7 +252,7 @@ function composeQuote(current){
 function quoteSummary(q){
  const lines=[S.businessName.toUpperCase(),q.businessPhone?"Phone: "+q.businessPhone:null,q.businessEmail?"Email: "+q.businessEmail:null,q.businessWebsite?"Web: "+q.businessWebsite:null,q.quoteNo?"Quote: "+q.quoteNo:null,q.customer?"Customer: "+q.customer:null,q.suburb?"Location: "+q.suburb:null,""];
  q.doors.forEach(function(d,i){
-   lines.push("DOOR "+(i+1)+" — "+d.type.toUpperCase(),"Width: "+d.w+" mm","Height: "+d.h+" mm","Colour: "+(d.colour||"—"),"Profile: "+(d.profile||"—"),"Motor: "+d.motor,"Removal of existing door: "+(d.removal?"Yes":"No"));
+   lines.push("DOOR "+(i+1)+" — "+d.type.toUpperCase()+(d.series?" SERIES "+d.series:""),"Width: "+d.w+" mm","Height: "+d.h+" mm","Colour: "+(d.colour||"—"),"Profile: "+(d.profile||"—"),"Motor: "+d.motor,"Removal of existing door: "+(d.removal?"Yes":"No"));
    if(d.addonItems&&d.addonItems.length)lines.push("Extras: "+d.addonItems.map(function(x){return (x.displayName||x.name)+(x.qty>1?" ×"+x.qty:"")}).join(", "));
    if(d.notes)lines.push("Notes: "+d.notes);
    lines.push("Door total: "+money(d.issue)+" incl. GST","")
@@ -264,7 +264,7 @@ function renderDoorItems(){
  if(!$("doorItems"))return;
  if(!quoteDoors.length)$("doorItems").innerHTML='<div class="hint">No completed doors added yet. The current door is included automatically until you add it and start another.</div>';
  else $("doorItems").innerHTML=quoteDoors.map(function(d,i){
-   return '<div class="door-item"><div class="door-no">'+(i+1)+'</div><div class="door-main"><b>'+safe(d.type)+' — Width '+d.w+' mm × Height '+d.h+' mm</b><small>'+safe(d.colour||"")+' • '+safe(d.profile||"")+' • '+safe(d.motor||"")+'</small></div><div class="door-price">'+money(d.issue)+'</div><button class="door-edit" onclick="editDoor('+i+')">Edit</button><button class="door-remove" onclick="removeDoor('+i+')">Remove</button></div>'
+   return '<div class="door-item"><div class="door-no">'+(i+1)+'</div><div class="door-main"><b>'+safe(d.type)+(d.series?' Series '+safe(d.series):'')+' — Width '+d.w+' mm × Height '+d.h+' mm</b><small>'+safe(d.colour||"")+' • '+safe(d.profile||"")+' • '+safe(d.motor||"")+'</small></div><div class="door-price">'+money(d.issue)+'</div><button class="door-edit" onclick="editDoor('+i+')">Edit</button><button class="door-remove" onclick="removeDoor('+i+')">Remove</button></div>'
  }).join("")
 }
 function calc(){
@@ -367,7 +367,7 @@ async function buildPdfQuote(){
  const detail=[["Quote #",q.quoteNo||"-"],["Date",new Date().toLocaleDateString("en-AU")],["Valid for",q.quoteValidity+" days"],["Customer",q.customer||"-"],["Phone",q.phone||"-"],["Email",q.email||"-"],["Location",q.suburb||q.city],["Doors",String(q.doors.length)]];
  detail.forEach(function(r,i){const col=i%4,row=Math.floor(i/4),x=M+5+col*43.5,yy=y+7+row*12;doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor.apply(doc,muted);doc.text(r[0],x,yy);doc.setFont("helvetica","bold");doc.setFontSize(8.4);doc.setTextColor.apply(doc,ink);doc.text(String(r[1]).slice(0,23),x,yy+4.5)});y+=39;
  q.doors.forEach(function(d,i){
-   ensure(49);doc.setFillColor.apply(doc,navy);doc.roundedRect(M,y,PW-2*M,8,2,2,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text("DOOR "+(i+1)+" — "+String(d.type||"").toUpperCase(),M+4,y+5.5);doc.setTextColor.apply(doc,yellow);doc.text(pdfMoney(d.issue)+" incl. GST",PW-M-4,y+5.5,{align:"right"});y+=11;
+   ensure(49);doc.setFillColor.apply(doc,navy);doc.roundedRect(M,y,PW-2*M,8,2,2,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text("DOOR "+(i+1)+" — "+String(d.type||"").toUpperCase()+(d.series?" SERIES "+String(d.series).toUpperCase():""),M+4,y+5.5);doc.setTextColor.apply(doc,yellow);doc.text(pdfMoney(d.issue)+" incl. GST",PW-M-4,y+5.5,{align:"right"});y+=11;
    doc.setDrawColor.apply(doc,line);doc.setFillColor(255,255,255);doc.roundedRect(M,y,PW-2*M,31,2,2,"FD");
    const left=M+5,right=M+95,rowsL=[["Width",d.w+" mm"],["Height",d.h+" mm"],["Colour",d.colour],["Profile / style",d.profile]],rowsR=[["Motor",d.motor],["Removal",d.removal?"Included":"Not included"],["Extras",(d.addonItems||[]).length+" item(s)"],["Installation","Supply & install"]];
    rowsL.forEach(function(r,j){const yy=y+6+j*6.3;doc.setFont("helvetica","normal");doc.setFontSize(7.6);doc.setTextColor.apply(doc,muted);doc.text(r[0],left,yy);doc.setFont("helvetica","bold");doc.setTextColor.apply(doc,ink);doc.text(String(r[1]||"-").slice(0,38),left+25,yy)});
@@ -463,7 +463,7 @@ function bindInputs(){
 async function registerAppWorker(){
  if(!("serviceWorker" in navigator)||location.protocol==="file:")return;
  try{
-   const reg=await navigator.serviceWorker.register("./sw.js?v=19");await reg.update();
+   const reg=await navigator.serviceWorker.register("./sw.js?v=20");await reg.update();
    let reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload()})
  }catch(e){}
 }
@@ -480,7 +480,7 @@ function decodeQuote(x){try{let v=x.replace(/-/g,"+").replace(/_/g,"/");while(v.
 
 function customerUrl(){
  const q=getFullQuote();if(q.status!=="APPROVED"||!q.doors.length){toast("Complete all doors before sharing");return""}
- const publicQ={quoteNo:q.quoteNo,customer:q.customer,suburb:q.suburb,city:q.city,doors:q.doors.map(function(d){return{type:d.type,w:d.w,h:d.h,colour:d.colour,profile:d.profile,motor:d.motor,removal:d.removal,addonItems:(d.addonItems||[]).map(function(i){return{name:i.name,displayName:i.displayName,measure:i.measure,qty:i.qty,totalRetail:i.totalRetail}}),notes:d.notes,issue:d.issue}}),issue:q.issue,businessName:S.businessName,businessPhone:q.businessPhone,businessEmail:q.businessEmail,businessWebsite:q.businessWebsite,quoteValidity:S.quoteValidity,created:new Date().toISOString()};
+ const publicQ={quoteNo:q.quoteNo,customer:q.customer,suburb:q.suburb,city:q.city,doors:q.doors.map(function(d){return{type:d.type,series:d.series,w:d.w,h:d.h,colour:d.colour,profile:d.profile,motor:d.motor,removal:d.removal,addonItems:(d.addonItems||[]).map(function(i){return{name:i.name,displayName:i.displayName,measure:i.measure,qty:i.qty,totalRetail:i.totalRetail}}),notes:d.notes,issue:d.issue}}),issue:q.issue,businessName:S.businessName,businessPhone:q.businessPhone,businessEmail:q.businessEmail,businessWebsite:q.businessWebsite,quoteValidity:S.quoteValidity,created:new Date().toISOString()};
  const url=location.origin+location.pathname+"?quote="+encodeURIComponent(encodeQuote(publicQ));if(url.length>7000){toast("This quote is too large for a customer link — use Share PDF");return""}return url
 }
 async function shareCustomerLink(){
@@ -492,7 +492,7 @@ function installApp(){if(deferredInstallPrompt){deferredInstallPrompt.prompt();d
 function renderPublicQuote(q){
  if(!q||!q.issue||!q.doors||!q.doors.length)return;const esc=safe,contact=[q.businessPhone,q.businessEmail,q.businessWebsite].filter(Boolean).map(esc).join(" • ");
  const doors=q.doors.map(function(d,i){
-   return '<section class="public-door"><h2>Door '+(i+1)+' — '+esc(d.type)+'</h2><div class="public-grid"><div><b>Width</b><span>'+esc(d.w)+' mm</span></div><div><b>Height</b><span>'+esc(d.h)+' mm</span></div><div><b>Colour</b><span>'+esc(d.colour||"")+'</span></div><div><b>Profile / Style</b><span>'+esc(d.profile||"")+'</span></div><div><b>Motor</b><span>'+esc(d.motor||"")+'</span></div><div><b>Removal</b><span>'+(d.removal?"Included":"Not included")+'</span></div></div>'+((d.addonItems||[]).length?'<div class="public-notes"><b>Extras</b><p>'+d.addonItems.map(function(x){return esc(x.displayName||x.name)+(x.qty>1?" ×"+x.qty:"")}).join("<br>")+'</p></div>':"")+(d.notes?'<div class="public-notes"><b>Notes</b><p>'+esc(d.notes)+'</p></div>':"")+'<div class="public-door-total">Door total: '+money(d.issue)+' incl. GST</div></section>'
+   return '<section class="public-door"><h2>Door '+(i+1)+' — '+esc(d.type)+(d.series?' Series '+esc(d.series):'')+'</h2><div class="public-grid"><div><b>Width</b><span>'+esc(d.w)+' mm</span></div><div><b>Height</b><span>'+esc(d.h)+' mm</span></div><div><b>Colour</b><span>'+esc(d.colour||"")+'</span></div><div><b>Profile / Style</b><span>'+esc(d.profile||"")+'</span></div><div><b>Motor</b><span>'+esc(d.motor||"")+'</span></div><div><b>Removal</b><span>'+(d.removal?"Included":"Not included")+'</span></div></div>'+((d.addonItems||[]).length?'<div class="public-notes"><b>Extras</b><p>'+d.addonItems.map(function(x){return esc(x.displayName||x.name)+(x.qty>1?" ×"+x.qty:"")}).join("<br>")+'</p></div>':"")+(d.notes?'<div class="public-notes"><b>Notes</b><p>'+esc(d.notes)+'</p></div>':"")+'<div class="public-door-total">Door total: '+money(d.issue)+' incl. GST</div></section>'
  }).join("");
  document.body.className="public-quote";document.body.innerHTML='<main class="public-card"><div class="public-head"><img class="public-brand-logo" src="brand-logo.svg?v=10" alt="B.O.B Garage Doors"><div><h1>'+esc(q.businessName||"B.O.B Garage Doors")+'</h1><p>Supply & Installation Quote • '+esc(q.city||"")+'</p></div></div><div class="public-price">'+money(q.issue)+' <span>quote total incl. GST</span></div><div class="public-grid"><div><b>Quote</b><span>'+esc(q.quoteNo||"")+'</span></div><div><b>Customer</b><span>'+esc(q.customer||"")+'</span></div><div><b>Location</b><span>'+esc(q.suburb||"")+'</span></div><div><b>Number of doors</b><span>'+q.doors.length+'</span></div></div>'+doors+'<div class="public-valid">Valid for '+esc(q.quoteValidity||14)+' days from issue date.</div><div class="public-actions"><button onclick="window.print()">Save / Print PDF</button>'+(q.businessPhone?'<a href="tel:'+esc(q.businessPhone)+'">Call us</a>':"")+(q.businessEmail?'<a href="mailto:'+esc(q.businessEmail)+'">Email us</a>':"")+(q.businessWebsite?'<a href="https://'+esc(q.businessWebsite.replace(/^https?:\/\//,""))+'" target="_blank">Website</a>':"")+'</div><div class="public-contact">'+contact+'</div></main>'
 }
