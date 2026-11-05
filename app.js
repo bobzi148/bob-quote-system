@@ -1,6 +1,6 @@
 const DFLT={gst:10,fixedProfit:1200,seriesBProfit:1500,removalRetail:100,jayCost:215,jayRetail:450,superCost:280,superRetail:500,merlinCost:420,merlinRetail:650,grifcoCost:826,grifcoRetail:1100,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,bneRollerInstall:450,bneRollerRemove:550,bneSingleInstall:500,bneSingleRemove:600,bneMotorLabour:75,bneDoubleInstall:700,bneDoubleRemove:850,bneSpecialLift:300,bneDoubleWidth:3000,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
-const APP_VERSION="v20", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
+const APP_VERSION="v21", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
 const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
 let currentExtras=[],quoteDoors=[];
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
@@ -117,15 +117,15 @@ function defs(sup,type,w,h){
  if(sup==="Auto")return[];
  if(sup==="Steel-Line"&&type==="Sectional")return[
   ["matt","Colorbond Matt","check",()=>w<=3500?220:332],["wood","Colorbond Premium Woodlook","check",()=>w<=3500?220:368],["ranch","Ranch window insert","qty",()=>144],["stan","Stanford window insert","qty",()=>92],["herit","Heritage window insert","qty",()=>73],["tap","Taper","check",()=>w<=3500?159:258],
-  ["lhr","Low headroom kit","check",()=>0,"Steel-Line",189],
+  ["hdr_std","Standard headroom track setup","check",()=>0,"Steel-Line",189],["lhr_front","Low headroom — Front Mount","check",()=>0,"Steel-Line",189],["lhr_rear","Low headroom — Rear Mount","check",()=>0,"Steel-Line / confirm rear-mount supplier cost",189],
   ["pel250","250mm × 55mm pelmet","check",()=>156,"Steel-Line",400],["pel200","200mm pelmet + Quick Closers","check",()=>220,"Steel-Line",400],
   ["coast","Coastal upgrade","check",()=>557],["ins","Mammoth insulation","check",()=>insulation(w,h)],
-  ["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450],
+  ["ins","Mammoth insulation — Steel-Line system","check",()=>insulation(w,h),"Steel-Line"],["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450],
   ["c12524","Cover pair 125×70×2400","check",()=>83],["c12530","Cover pair 125×70×3000","check",()=>97],["c15024","Cover pair 150×70×2400","check",()=>86],["c15030","Cover pair 150×70×3000","check",()=>100]
  ];
  if(sup==="Centurion"&&type==="Sectional")return[
   ["side","Side track seals","check",()=>33],["reg","Regency window insert","qty",()=>86],["geo","Georgian window insert","qty",()=>170],["tap","Taper hinged >40mm","check",()=>134*lm(w)],["timba","Timbalook Premium finish","check",()=> (h<=2330?111:h<=2910?139:166)*lm(w)],["flex","Flexographic finish","check",()=>53*sqm(w,h)],["pow","Powdercoat finish","check",()=>53*sqm(w,h)],["weather","Oversize weather seal","check",()=>8*lm(w)],
-  ["lhr","Low headroom kit","check",()=>89,"Centurion",189],
+  ["hdr_std","Standard headroom track setup","check",()=>0,"Centurion",189],["lhr_front","Low headroom — Front Mount","check",()=>89,"Centurion",189],["lhr_rear","Low headroom — Rear Mount","check",()=>89,"Centurion / confirm rear-mount compatibility",189],
   ["pel250","250mm × 55mm pelmet","check",()=>156,"Steel-Line",400],["pel200","200mm pelmet + Quick Closers","check",()=>220,"Steel-Line",400],
   ["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450]
  ];
@@ -184,8 +184,9 @@ function refreshExtraComposerCost(){
  if(!$("extraChoice"))return;
  const choice=$("extraChoice").value,label=$("extraMeasureLabel"),measure=$("extraMeasure");
  $("extraCost").readOnly=true;
- if(label)label.textContent=choice==="lhr"?"Headroom available mm *":"Size / measure";
- if(measure){measure.placeholder=choice==="lhr"?"Enter exact headroom, e.g. 285":"e.g. 4800mm, 2 panels, pair";measure.inputMode=choice==="lhr"?"numeric":"text"}
+ const needsHeadroom=choice==="lhr_front"||choice==="lhr_rear";
+ if(label)label.textContent=needsHeadroom?"Headroom available mm *":"Size / measure";
+ if(measure){measure.placeholder=needsHeadroom?"Enter exact headroom, e.g. 230":"e.g. 4800mm, 2 panels, pair";measure.inputMode=needsHeadroom?"numeric":"text"}
  if(!choice){$("extraCost").value="";$("extraPrice").value="";return}
  if(choice==="__custom"){$("extraCost").readOnly=false;$("extraCost").value="";$("extraPrice").value="";return}
  const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h),d=defs(sup,type,w,h).find(function(x){return x[0]===choice});
@@ -196,7 +197,7 @@ function addExtraItem(){
  const choice=$("extraChoice").value,qty=Math.max(1,+$("extraQty").value||1),rawMeasure=$("extraMeasure").value.trim(),unitRetail=+$("extraPrice").value||0,enteredCost=+$("extraCost").value||0;
  if(!choice)return toast("Choose an extra first");
  let measure=rawMeasure;
- if(choice==="lhr"){const mm=parseFloat(rawMeasure);if(!Number.isFinite(mm)||mm<=0)return toast("Enter the exact headroom in mm");measure=Math.round(mm)+" mm"}
+ if(choice==="lhr_front"||choice==="lhr_rear"){const mm=parseFloat(rawMeasure);if(!Number.isFinite(mm)||mm<=0)return toast("Enter the exact headroom in mm");measure=Math.round(mm)+" mm"}
  if(unitRetail<=0)return toast("Technician must enter the customer price");
  const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h);
  let item;
@@ -231,7 +232,7 @@ function selectedAddons(){
  repriceCurrentExtras();let costTotal=0,retailTotal=0,names=[],items=[],review=false;
  currentExtras.forEach(function(i){
    const qty=Math.max(1,+i.qty||1),c=i.unitCost,unitRetail=+i.unitRetail||0,itemCost=c==null?0:c*qty,totalRetail=unitRetail*qty;
-   if(c==null||i.needsReview||unitRetail<=0||(i.presetId==="lhr"&&!(parseFloat(i.measure)>0)))review=true;
+   if(c==null||i.needsReview||unitRetail<=0||((i.presetId==="lhr_front"||i.presetId==="lhr_rear")&&!(parseFloat(i.measure)>0)))review=true;
    costTotal+=itemCost;retailTotal+=totalRetail;
    const display=i.name+(i.measure?" — "+i.measure:"");names.push(display+(qty>1?" ×"+qty:""));
    items.push(Object.assign({},i,{qty:qty,totalCost:c==null?null:itemCost,totalRetail:totalRetail,displayName:display}))
@@ -423,7 +424,7 @@ function widths(type,sup){if(type==="Sectional")return sup==="Steel-Line"?[2400,
 function heights(type,sup){return type==="Sectional"?(sup==="Steel-Line"?[2100,2400,2700,3200]:[2100,2400,2700,2900,3150,3400]):[2100,2200,2400,2600,3000,3300,3600,4200,4800,5100]}
 function recFor(city,type,sup,w,h,m){const b=base(type,w,h,sup);if(!b.ok)return null;const mi=motor(city,m),lab=installationCost(city,type,w,h,false,mi.name,false);if(!lab.ok)return null;const gst=1+S.gst/100,pricingBase=b.cost+mi.retail+lab.cost,targetProfit=type==="Roller"&&b.series==="B"?S.seriesBProfit:S.fixedProfit,price=Math.round((pricingBase+targetProfit)*gst);return{price:price,cost:b.cost,basis:b.basis,series:b.series||"",targetProfit:targetProfit}}
 function renderPrices(){const city=$("plCity").value,type=$("plDoor").value,sup=$("plSupplier").value,m=$("plMotor").value;let r="<tr><th>Height</th><th>Width</th><th>Series</th><th>Customer price incl GST</th><th>Supplier basis</th><th class='admin-only'>Door cost ex GST</th><th class='admin-only'>Target profit ex GST</th></tr>";heights(type,sup).forEach(h=>widths(type,sup).forEach(w=>{const x=recFor(city,type,sup,w,h,m);if(x)r+=`<tr><td><b>${h} mm</b></td><td>${w} mm</td><td>${x.series||"—"}</td><td><b>${money(x.price)}</b></td><td>${x.basis}</td><td class="admin-only">${money(x.cost)}</td><td class="admin-only">${money(x.targetProfit)}</td></tr>`}));$("priceTable").innerHTML=r}
-const CAT={"Steel-Line|Sectional":[["Colorbond Premium woodlook","$220 ≤3500W / $368 >3500W","Per door"],["Colorbond Matt","$220 ≤3500W / $332 >3500W","Per door"],["Coastal upgrade","$557","Per door"],["Ranch window","$144","Per insert"],["Stanford window","$92","Per insert"],["Heritage window","$73","Per insert"],["Taper","$159 ≤3500W / $258 >3500W","Per door"],["Pelmet 250×55","$156","Each"],["200mm pelmet + Quick Closers","$220","Pair"],["Jamb pairs","$152–$193","By size"],["Cover pairs","$83–$100","By size"],["Mammoth insulation","$818–$1,699","By width/height"]],"Centurion|Sectional":[["Side track seals","$33","Per door"],["Regency window","$86","Per window"],["Georgian window","$170","Per window"],["Taper hinged >40mm","$134","Per lineal metre by width"],["Timbalook Premium","$111 / $139 / $166","Per lineal metre by width, height band"],["Flexographic finish","$53","Per m²"],["Powdercoat finish","$53","Per m²"],["Oversize weather seal","$8","Per lineal metre by width"],["Low headroom kit","$89","Per door"]],"Steel-Line|Roller":[["Colorbond Matt","$184 ≤3100W / $272 >3100W","Per door"],["Reverse rolled","$110 ≤3100W / $125 >3100W","Per door"],["AA track upgrade","$174","≤3100W"],["300mm pelmet","$105 ≤3100W / $113 >3100W","Per door"],["Taper","$189 ≤3000W / $262 >3000W","Per door"],["Jamb pairs","$152–$193","By size"],["Cover pairs","$83–$100","By size"],["Shoot bolts","$37","Pair"],["Centre lock","$48","Each"],["Ember brush seal","$201","Top only"]],"Centurion|Roller":[["Hard cardboard cylinder stretch","$20","Per lineal metre by width"],["Hard cardboard cylinder shrink","$27","Per lineal metre by width"],["Box a Door","$101–$157","By width"],["Premium Matt","$104 / $114 / $142 / $199","Per lineal metre by width, height band"],["Taper","$42","Per lineal metre by width"],["Reverse rolled","$105 Series A / $149 Series AA","Per door"],["Oversize weather seal","$8","Per lineal metre by width"]]};
+const CAT={"Steel-Line|Sectional":[["Colorbond Premium woodlook","$220 ≤3500W / $368 >3500W","Per door"],["Colorbond Matt","$220 ≤3500W / $332 >3500W","Per door"],["Coastal upgrade","$557","Per door"],["Ranch window","$144","Per insert"],["Stanford window","$92","Per insert"],["Heritage window","$73","Per insert"],["Taper","$159 ≤3500W / $258 >3500W","Per door"],["Pelmet 250×55","$156","Each"],["200mm pelmet + Quick Closers","$220","Pair"],["Jamb pairs","$152–$193","By size"],["Cover pairs","$83–$100","By size"],["Mammoth insulation","$818–$1,699","By width/height"]],"Centurion|Sectional":[["Side track seals","$33","Per door"],["Regency window","$86","Per window"],["Georgian window","$170","Per window"],["Taper hinged >40mm","$134","Per lineal metre by width"],["Timbalook Premium","$111 / $139 / $166","Per lineal metre by width, height band"],["Flexographic finish","$53","Per m²"],["Powdercoat finish","$53","Per m²"],["Oversize weather seal","$8","Per lineal metre by width"],["Standard headroom track setup","$0 supplier extra","$189 customer price"],["Low headroom — Front Mount","$89 Centurion / $0 Steel-Line","$189 customer price"],["Low headroom — Rear Mount","Supplier compatibility/cost to confirm","$189 customer price"],["Mammoth insulation","$818–$1,699","By width/height • Steel-Line matrix"]],"Steel-Line|Roller":[["Colorbond Matt","$184 ≤3100W / $272 >3100W","Per door"],["Reverse rolled","$110 ≤3100W / $125 >3100W","Per door"],["AA track upgrade","$174","≤3100W"],["300mm pelmet","$105 ≤3100W / $113 >3100W","Per door"],["Taper","$189 ≤3000W / $262 >3000W","Per door"],["Jamb pairs","$152–$193","By size"],["Cover pairs","$83–$100","By size"],["Shoot bolts","$37","Pair"],["Centre lock","$48","Each"],["Ember brush seal","$201","Top only"]],"Centurion|Roller":[["Hard cardboard cylinder stretch","$20","Per lineal metre by width"],["Hard cardboard cylinder shrink","$27","Per lineal metre by width"],["Box a Door","$101–$157","By width"],["Premium Matt","$104 / $114 / $142 / $199","Per lineal metre by width, height band"],["Taper","$42","Per lineal metre by width"],["Reverse rolled","$105 Series A / $149 Series AA","Per door"],["Oversize weather seal","$8","Per lineal metre by width"]]};
 function renderCatalog(){
  const sup=$("catSupplier").value,type=$("catDoor").value,w=+$("catWidth").value||0,h=+$("catHeight").value||0,ds=defs(sup,type,w,h);
  $("catalogNote").textContent=`Internal supplier cost preview for ${sup} ${type} at ${w} × ${h} mm. These costs never appear on the customer quote; the technician enters the customer price manually.`;
@@ -463,7 +464,7 @@ function bindInputs(){
 async function registerAppWorker(){
  if(!("serviceWorker" in navigator)||location.protocol==="file:")return;
  try{
-   const reg=await navigator.serviceWorker.register("./sw.js?v=20");await reg.update();
+   const reg=await navigator.serviceWorker.register("./sw.js?v=21");await reg.update();
    let reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload()})
  }catch(e){}
 }
