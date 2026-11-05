@@ -175,8 +175,9 @@ function repriceCurrentExtras(){
    const source=item.sourceSupplier||effectiveAddonSupplier($("supplier").value,type,w,h);
    const d=defs(source,type,w,h).find(function(x){return x[0]===item.presetId});
    if(!d)return Object.assign({},item,{unitCost:null,needsReview:true});
-   const c=d[3]();
-   return Object.assign({},item,{name:d[1],sourceSupplier:d[4]||source,unitCost:c,needsReview:c==null})
+   const c=d[3](),patch={name:d[1],sourceSupplier:d[4]||source,unitCost:c,needsReview:c==null};
+   if(item.presetId==="ins"&&c!=null)patch.unitRetail=Math.round(c*(1+S.gst/100)+300);
+   return Object.assign({},item,patch)
  })
 }
 function renderAddons(preserve){
@@ -320,7 +321,7 @@ function editDoor(i){
  const current=calc();if(doorStarted(current)&&!confirm("Replace the current unfinished door with Door "+(i+1)+"?"))return;
  quoteDoors.splice(i,1);$("doorType").value=d.type;$("supplier").value=d.supplier;$("width").value=d.w;$("height").value=d.h;if($("headroom"))$("headroom").value=d.headroom||"";$("motor").value=(d.motor==="JayTech"||d.motor==="Superlift")?"Standard Motor":d.motor;$("removal").value=d.removal?"Yes":"No";if($("specialLift"))$("specialLift").value=d.specialLift?"Yes":"No";$("notes").value=d.notes||"";$("finalOffer").value=d.issue&&d.issue!==d.recommended?d.issue:"";
  populateColourProfile(false);$("doorColour").value=d.colour||"";$("doorProfile").value=d.profile||"";
- currentExtras=(d.addonItems||[]).map(function(x){return Object.assign({},x,{uid:x.uid||uid()})});
+ currentExtras=(d.addonItems||[]).filter(function(x){return !(x.uid==="auto-headroom"||x.presetId==="hdr_std"||x.presetId==="lhr_front"||x.presetId==="lhr_rear")}).map(function(x){return Object.assign({},x,{uid:x.uid||uid()})});
  renderAddons(false);saveDraft();calc();window.scrollTo({top:0,behavior:"smooth"})
 }
 function removeDoor(i){if(!quoteDoors[i])return;if(confirm("Remove Door "+(i+1)+" from this quote?")){quoteDoors.splice(i,1);saveDraft();calc()}}
@@ -441,7 +442,7 @@ const CAT={"Steel-Line|Sectional":[["Colorbond Premium woodlook","$220 ≤3500W 
 function renderCatalog(){
  const sup=$("catSupplier").value,type=$("catDoor").value,w=+$("catWidth").value||0,h=+$("catHeight").value||0,ds=defs(sup,type,w,h);
  $("catalogNote").textContent=`Internal supplier cost preview for ${sup} ${type} at ${w} × ${h} mm. These costs never appear on the customer quote; the technician enters the customer price manually.`;
- $("addonTable").innerHTML="<tr><th>Add-on</th><th>Internal cost ex GST</th><th>Customer price incl GST</th><th>Pricing basis</th></tr>"+ds.map(d=>{const c=d[3](),basis=d[2]==="qty"?"Per item / quantity":"Per selected add-on";return `<tr><td><b>${d[1]}</b></td><td><b>${c==null?"Office review":money(c)}</b></td><td><b>${d[5]!=null?money(d[5]):"Manual"}</b></td><td>${basis} • current size ${w} × ${h} mm${d[4]?" • "+d[4]+" accessory":""}</td></tr>`}).join("")
+ $("addonTable").innerHTML="<tr><th>Add-on</th><th>Internal cost ex GST</th><th>Customer price incl GST</th><th>Pricing basis</th></tr>"+ds.map(d=>{const c=d[3](),basis=d[2]==="qty"?"Per item / quantity":"Per selected add-on";const retail=d[0]==="ins"&&c!=null?Math.round(c*(1+S.gst/100)+300):(d[5]!=null?d[5]:null);return `<tr><td><b>${d[1]}</b></td><td><b>${c==null?"Office review":money(c)}</b></td><td><b>${retail!=null?money(retail):"Manual"}</b></td><td>${basis} • current size ${w} × ${h} mm${d[4]?" • "+d[4]+" accessory":""}</td></tr>`}).join("")
 }
 
 function loadSettingsUI(){Object.keys(DFLT).forEach(function(k){const e=$("s_"+k);if(e)e.value=S[k]})}
