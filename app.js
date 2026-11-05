@@ -71,10 +71,27 @@ function validateRequiredSpecs(){
 function idx(n,a){return a.findIndex(b=>n>=b[0]&&n<=b[1])} function ceilStd(h,a){return a.find(v=>h<=v)??null}
 function matrixCost(M,w,h){w=norm5(w);h=norm5(h);const wi=idx(w,M.w),hi=idx(h,M.h);return wi<0||hi<0?null:{cost:M.p[hi][wi],chargedW:w,chargedH:h}}
 function steelSecCost(w,h){return matrixCost(steelSec,w,h)} function centSecCost(w,h){return matrixCost(centSec,w,h)}
-function steelRollCost(w,h){w=norm5(w);const wi=idx(w,steelRoll.w),r=steelRoll.rows.find(x=>h<=x.h);if(wi<0||!r||r.p[wi]==null)return null;return{cost:r.p[wi],chargedW:w,chargedH:r.h}}
-function centRollCost(w,h){w=+w;h=+h;if(w<=3100){const wi=idx(w,centA.w),hh=ceilStd(h,centA.h);if(wi<0||!hh)return null;return{cost:centA.p[centA.h.indexOf(hh)][wi],chargedH:hh,series:"A"}}const wi=idx(w,centAA.w),hh=ceilStd(h,centAA.h);if(wi<0||!hh)return null;return{cost:centAA.p[centAA.h.indexOf(hh)][wi],chargedH:hh,series:"AA"}}
+function steelRollCost(w,h){
+ w=norm5(w);h=+h;
+ if(h>3000){
+   const wi=idx(w,steelRollB.w),hh=ceilStd(h,steelRollB.h);if(wi<0||!hh)return null;
+   const cost=steelRollB.p[steelRollB.h.indexOf(hh)][wi];if(cost==null)return null;
+   return{cost:cost,chargedW:w,chargedH:hh,series:"B"}
+ }
+ const wi=idx(w,steelRoll.w),r=steelRoll.rows.find(x=>h<=x.h);if(wi<0||!r||r.p[wi]==null)return null;
+ return{cost:r.p[wi],chargedW:w,chargedH:r.h,series:w>3150?"AA":"A"}
+}
+function centRollCost(w,h){
+ w=+w;h=+h;
+ if(h>3000){
+   const wi=idx(w,centB.w),hh=ceilStd(h,centB.h);if(wi<0||!hh)return null;
+   return{cost:centB.p[centB.h.indexOf(hh)][wi],chargedH:hh,series:"B"}
+ }
+ if(w<=3100){const wi=idx(w,centA.w),hh=ceilStd(h,centA.h);if(wi<0||!hh)return null;return{cost:centA.p[centA.h.indexOf(hh)][wi],chargedH:hh,series:"A"}}
+ const wi=idx(w,centAA.w),hh=ceilStd(h,centAA.h);if(wi<0||!hh)return null;return{cost:centAA.p[centAA.h.indexOf(hh)][wi],chargedH:hh,series:"AA"}
+}
 function costs(type,w,h){return type==="Sectional"?{"Steel-Line":steelSecCost(w,h),Centurion:centSecCost(w,h)}:{"Steel-Line":steelRollCost(w,h),Centurion:centRollCost(w,h)}}
-function base(type,w,h,sup){const c=costs(type,w,h),a=Object.entries(c).filter(x=>x[1]);if(!a.length)return{ok:false,c};if(sup!=="Auto"){if(!c[sup])return{ok:false,c,reason:sup+" has no automatic table price for this size"};return{ok:true,c,cost:c[sup].cost,basis:sup,recommended:sup,recommendedCost:c[sup].cost}}const lo=a.reduce((x,y)=>y[1].cost<x[1].cost?y:x),hi=a.reduce((x,y)=>y[1].cost>x[1].cost?y:x);return{ok:true,c,cost:lo[1].cost,basis:"Auto / lowest cost",recommended:lo[0],recommendedCost:lo[1].cost,maxSupplier:hi[0],maxCost:hi[1].cost}}
+function base(type,w,h,sup){const c=costs(type,w,h),a=Object.entries(c).filter(x=>x[1]);if(!a.length)return{ok:false,c};if(sup!=="Auto"){if(!c[sup])return{ok:false,c,reason:sup+" has no automatic table price for this size"};const x=c[sup];return{ok:true,c,cost:x.cost,series:x.series||"",basis:sup+(x.series?" Series "+x.series:""),recommended:sup,recommendedCost:x.cost}}const lo=a.reduce((x,y)=>y[1].cost<x[1].cost?y:x),hi=a.reduce((x,y)=>y[1].cost>x[1].cost?y:x),x=lo[1];return{ok:true,c,cost:x.cost,series:x.series||"",basis:"Auto / "+lo[0]+(x.series?" Series "+x.series:"")+" / lowest cost",recommended:lo[0],recommendedCost:x.cost,maxSupplier:hi[0],maxCost:hi[1].cost}}
 function tech(type,w){if(type==="Roller")return w<=3100?S.techRollerSmall:S.techRollerLarge;if(w<=3000)return S.techSectionalSmall;if(w<=4800)return S.techSectionalMed;return S.techSectionalLarge}
 function installationCost(city,type,w,h,removal,motorName,specialLift){
  if(city!=="Brisbane")return{ok:true,cost:tech(type,w),label:"Perth technician allowance"};
@@ -92,7 +109,7 @@ function installationCost(city,type,w,h,removal,motorName,specialLift){
  if(specialLift)cost+=S.bneSpecialLift;
  return{ok:true,cost:cost,label:label}
 }
-function motor(city,m){if(m==="Manual")return{name:"Manual",cost:0,retail:0};if(m==="Merlin")return{name:"Merlin",cost:S.merlinCost,retail:S.merlinRetail};return city==="Perth"?{name:"JayTech",cost:S.jayCost,retail:S.jayRetail}:{name:"Superlift",cost:S.superCost,retail:S.superRetail}}
+function motor(city,m){if(m==="Manual")return{name:"Manual",cost:0,retail:0};if(m==="Merlin")return{name:"Merlin",cost:S.merlinCost,retail:S.merlinRetail};if(m==="Grifco LR Drive")return{name:"Grifco LR Drive",cost:S.grifcoCost,retail:S.grifcoRetail};return city==="Perth"?{name:"JayTech",cost:S.jayCost,retail:S.jayRetail}:{name:"Superlift",cost:S.superCost,retail:S.superRetail}}
 const lm=w=>w/1000,sqm=(w,h)=>w*h/1e6;
 function insulation(w,h){let wi=w<=3000?0:w<=5500?1:w<=6700?2:-1,hi=h<=2285?0:h<=2850?1:h<=3415?2:-1;return wi<0||hi<0?null:[[818,1039,1195],[1007,1290,1510],[1195,1447,1699]][hi][wi]}
 function boxCost(w){if(w<=2500)return 101;if(w<=2800)return 106;if(w<=3100)return 111;if(w<=3400)return 116;if(w<=3700)return 122;if(w<=4000)return 130;if(w<=4300)return 138;if(w<=4600)return 145;if(w<=4900)return 151;if(w<=5400)return 157;return null}
