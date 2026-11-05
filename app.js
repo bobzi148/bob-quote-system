@@ -1,25 +1,30 @@
-const DFLT={gst:10,fixedProfit:1200,removalRetail:100,jayCost:215,jayRetail:450,superCost:280,superRetail:500,merlinCost:420,merlinRetail:650,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,bneRollerInstall:450,bneRollerRemove:550,bneSingleInstall:500,bneSingleRemove:600,bneMotorLabour:75,bneDoubleInstall:700,bneDoubleRemove:850,bneSpecialLift:300,bneDoubleWidth:3000,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
+const DFLT={gst:10,fixedProfit:1200,seriesBProfit:1500,removalRetail:100,jayCost:215,jayRetail:450,superCost:280,superRetail:500,merlinCost:420,merlinRetail:650,grifcoCost:826,grifcoRetail:1100,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,bneRollerInstall:450,bneRollerRemove:550,bneSingleInstall:500,bneSingleRemove:600,bneMotorLabour:75,bneDoubleInstall:700,bneDoubleRemove:850,bneSpecialLift:300,bneDoubleWidth:3000,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
-const APP_VERSION="v19", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
+const APP_VERSION="v20", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
 const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
 let currentExtras=[],quoteDoors=[];
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
 const centSec={w:[[1500,2450],[2451,3000],[3001,3500],[3501,4300],[4301,4800],[4801,4880],[4881,5150],[5151,5565],[5566,5960],[5961,6200]],h:[[1860,2330],[2331,2440],[2441,2730],[2731,2910],[2911,3170],[3171,3425]],p:[[992,1053,1079,1244,1316,1416,1510,1638,2153,2265],[995,1067,1144,1426,1503,1551,1596,1715,2188,2300],[1034,1098,1308,1478,1583,1623,1658,1768,2236,2352],[1299,1374,1665,1866,2118,2175,2278,2453,2866,3011],[1343,1424,1713,1913,2164,2220,2324,2499,2909,3056],[1596,1689,2032,2274,2571,2637,2759,2968,3461,3634]]};
 const centA={w:[[900,1500],[1501,2000],[2001,2490],[2491,2650],[2651,2800],[2801,3100]],h:[2100,2200,2400,2600,3000],p:[[592,603,612,665,720,776],[612,630,663,720,780,836],[645,663,686,759,789,822],[674,687,740,833,879,928],[735,806,844,878,950,1024]]};
 const centAA={w:[[3101,3400],[3401,3760],[3761,4370],[4371,5100],[5101,5400]],h:[2100,2400,2600,3000],p:[[1132,1191,1359,1494,1523],[1196,1258,1454,1574,1617],[1211,1275,1472,1592,1636],[1215,1293,1488,1608,1654]]};
+const centB={w:[[2400,2500],[2501,3100],[3101,3400],[3401,3760],[3761,4000],[4001,4200],[4201,4370],[4371,4700],[4701,4980],[4981,5400]],h:[2400,3000,3300,3600,4200,4800,5100],p:[[1160,1228,1346,1406,1490,1574,1602,1684,1726,1767],[1160,1228,1346,1406,1490,1574,1602,1684,1726,1767],[1278,1356,1476,1544,1638,1724,1756,1805,1836,1874],[1395,1487,1611,1684,1790,1874,1912,1929,1947,1983],[1462,1558,1749,1812,1886,1983,2043,2072,2111,2129],[1683,1776,1935,2042,2116,2238,2274,2334,2380,2420],[1806,1889,1991,2146,2229,2314,2367,2403,2427,2514]]};
 const steelRoll={w:[[750,2150],[2155,2650],[2655,2850],[2855,3150],[3155,3250],[3255,3430],[3435,3760],[3765,4370],[4375,5100]],rows:[{h:2100,p:[591,682,810,877,null,null,null,null,null]},{h:2600,p:[674,739,924,963,1149,1279,1422,1483,1542]},{h:3000,p:[821,1012,1070,1101,1295,1462,1592,1722,1851]}]};
+const steelRollB={w:[[750,2150],[2155,2650],[2655,2850],[2855,3150],[3155,3250],[3255,3430],[3435,3760],[3765,4370],[4375,5100],[5105,5400]],h:[3300,4200,5100],p:[[null,null,null,1541,1647,1740,2007,2238,2299,null],[null,null,null,1819,1878,2007,2376,2669,2876,null],[null,null,null,2151,2264,2365,2817,3040,3340,null]]};
 const $=id=>document.getElementById(id), money=n=>n==null?"—":"$"+Math.round(+n).toLocaleString("en-AU"), ceil50=n=>Math.ceil(n/50)*50, floor50=n=>Math.floor(n/50)*50, norm5=n=>Math.ceil(+n/5)*5;
 function loadSettings(){
  try{
    const raw=JSON.parse(localStorage.getItem("bob_v3_settings")||"{}"),merged={...DFLT,...raw},migration=+(localStorage.getItem("bob_settings_migration_version")||0);
-   if(migration<19){
+   if(migration<20){
      if(raw.fixedProfit===undefined)merged.fixedProfit=1200;
+     if(raw.seriesBProfit===undefined)merged.seriesBProfit=1500;
      if(raw.jayRetail===undefined)merged.jayRetail=450;
      if(raw.superRetail===undefined)merged.superRetail=500;
      if(raw.merlinRetail===undefined)merged.merlinRetail=650;
+     if(raw.grifcoCost===undefined)merged.grifcoCost=826;
+     if(raw.grifcoRetail===undefined)merged.grifcoRetail=1100;
      if(raw.removalRetail===undefined||+raw.removalRetail===200)merged.removalRetail=100;
      localStorage.setItem("bob_v3_settings",JSON.stringify(merged));
-     localStorage.setItem("bob_settings_migration_version","19");
+     localStorage.setItem("bob_settings_migration_version","20");
    }
    return merged
  }catch(e){return {...DFLT}}
