@@ -1,5 +1,5 @@
-const C='bob-v19';
-const CORE=['./','./index.html','./style.css?v=19','./app.js?v=19','./manifest.webmanifest?v=19','./brand-logo.svg?v=19','./icon.svg'];
+const C='bob-v20';
+const CORE=['./','./index.html','./style.css?v=20','./app.js?v=20','./manifest.webmanifest?v=20','./brand-logo.svg?v=20','./icon.svg'];
 self.addEventListener('install',e=>e.waitUntil(Promise.all([caches.open(C).then(c=>c.addAll(CORE)),self.skipWaiting()])));
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k))))])));
 self.addEventListener('fetch',e=>{
