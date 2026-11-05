@@ -116,18 +116,29 @@ function boxCost(w){if(w<=2500)return 101;if(w<=2800)return 106;if(w<=3100)retur
 function defs(sup,type,w,h){
  if(sup==="Auto")return[];
  if(sup==="Steel-Line"&&type==="Sectional")return[
-  ["matt","Colorbond Matt","check",()=>w<=3500?220:332],["wood","Colorbond Premium Woodlook","check",()=>w<=3500?220:368],["ranch","Ranch window insert","qty",()=>144],["stan","Stanford window insert","qty",()=>92],["herit","Heritage window insert","qty",()=>73],["tap","Taper","check",()=>w<=3500?159:258],["pel250","250mm × 55mm pelmet","check",()=>156],["pel200","200mm pelmet + Quick Closers","check",()=>220],["coast","Coastal upgrade","check",()=>557],["ins","Mammoth insulation","check",()=>insulation(w,h)],["j12524","Jamb pair 125×70×2400","check",()=>152],["j12530","Jamb pair 125×70×3000","check",()=>183],["j15024","Jamb pair 150×70×2400","check",()=>158],["j15030","Jamb pair 150×70×3000","check",()=>193],["c12524","Cover pair 125×70×2400","check",()=>83],["c12530","Cover pair 125×70×3000","check",()=>97],["c15024","Cover pair 150×70×2400","check",()=>86],["c15030","Cover pair 150×70×3000","check",()=>100]
+  ["matt","Colorbond Matt","check",()=>w<=3500?220:332],["wood","Colorbond Premium Woodlook","check",()=>w<=3500?220:368],["ranch","Ranch window insert","qty",()=>144],["stan","Stanford window insert","qty",()=>92],["herit","Heritage window insert","qty",()=>73],["tap","Taper","check",()=>w<=3500?159:258],
+  ["lhr","Low headroom kit","check",()=>0,"Steel-Line",189],
+  ["pel250","250mm × 55mm pelmet","check",()=>156,"Steel-Line",400],["pel200","200mm pelmet + Quick Closers","check",()=>220,"Steel-Line",400],
+  ["coast","Coastal upgrade","check",()=>557],["ins","Mammoth insulation","check",()=>insulation(w,h)],
+  ["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450],
+  ["c12524","Cover pair 125×70×2400","check",()=>83],["c12530","Cover pair 125×70×3000","check",()=>97],["c15024","Cover pair 150×70×2400","check",()=>86],["c15030","Cover pair 150×70×3000","check",()=>100]
  ];
  if(sup==="Centurion"&&type==="Sectional")return[
-  ["side","Side track seals","check",()=>33],["reg","Regency window insert","qty",()=>86],["geo","Georgian window insert","qty",()=>170],["tap","Taper hinged >40mm","check",()=>134*lm(w)],["timba","Timbalook Premium finish","check",()=> (h<=2330?111:h<=2910?139:166)*lm(w)],["flex","Flexographic finish","check",()=>53*sqm(w,h)],["pow","Powdercoat finish","check",()=>53*sqm(w,h)],["weather","Oversize weather seal","check",()=>8*lm(w)],["lhr","Low headroom kit","check",()=>89],
-  ["pel250","250mm × 55mm pelmet","check",()=>156,"Steel-Line"],["pel200","200mm pelmet + Quick Closers","check",()=>220,"Steel-Line"],
-  ["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line"],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line"],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line"],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line"]
+  ["side","Side track seals","check",()=>33],["reg","Regency window insert","qty",()=>86],["geo","Georgian window insert","qty",()=>170],["tap","Taper hinged >40mm","check",()=>134*lm(w)],["timba","Timbalook Premium finish","check",()=> (h<=2330?111:h<=2910?139:166)*lm(w)],["flex","Flexographic finish","check",()=>53*sqm(w,h)],["pow","Powdercoat finish","check",()=>53*sqm(w,h)],["weather","Oversize weather seal","check",()=>8*lm(w)],
+  ["lhr","Low headroom kit","check",()=>89,"Centurion",189],
+  ["pel250","250mm × 55mm pelmet","check",()=>156,"Steel-Line",400],["pel200","200mm pelmet + Quick Closers","check",()=>220,"Steel-Line",400],
+  ["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450]
  ];
  if(sup==="Steel-Line"&&type==="Roller")return[
-  ["matt","Colorbond Matt","check",()=>w<=3100?184:272],["rev","Reverse rolled","check",()=>w<=3100?110:125],["aa","AA track upgrade","check",()=>w<=3100?174:null],["pel","300mm pelmet","check",()=>w<=3100?105:113],["tap","Taper","check",()=>w<=3000?189:262],["j12524","Jamb pair 125×70×2400","check",()=>152],["j12530","Jamb pair 125×70×3000","check",()=>183],["j15024","Jamb pair 150×70×2400","check",()=>158],["j15030","Jamb pair 150×70×3000","check",()=>193],["c12524","Cover pair 125×70×2400","check",()=>83],["c12530","Cover pair 125×70×3000","check",()=>97],["c15024","Cover pair 150×70×2400","check",()=>86],["c15030","Cover pair 150×70×3000","check",()=>100],["shoot","Shoot bolts pair","check",()=>37],["lock","Centre lock","check",()=>48],["ember","Ember brush seal top","check",()=>201]
+  ["matt","Colorbond Matt","check",()=>w<=3100?184:272],["rev","Reverse rolled","check",()=>w<=3100?110:125],["aa","AA track upgrade","check",()=>w<=3100?174:null],
+  ["pel","300mm pelmet","check",()=>w<=3100?105:113,"Steel-Line",400],["tap","Taper","check",()=>w<=3000?189:262],
+  ["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450],
+  ["c12524","Cover pair 125×70×2400","check",()=>83],["c12530","Cover pair 125×70×3000","check",()=>97],["c15024","Cover pair 150×70×2400","check",()=>86],["c15030","Cover pair 150×70×3000","check",()=>100],["shoot","Shoot bolts pair","check",()=>37],["lock","Centre lock","check",()=>48],["ember","Ember brush seal top","check",()=>201]
  ];
  if(sup==="Centurion"&&type==="Roller")return[
-  ["matt","Premium Matt Colorbond","check",()=> (h<=2200?104:h<=2600?114:h<=3600?142:199)*lm(w)],["tap","Taper","check",()=>42*lm(w)],["rev","Reverse rolled","check",()=>w<=3100?105:149],["weather","Oversize weather seal","check",()=>8*lm(w)],["card","Hard cardboard cylinder stretch","check",()=>20*lm(w)],["shrink","Hard cardboard cylinder shrink","check",()=>27*lm(w)],["box","Box a Door packaging","check",()=>boxCost(w)]
+  ["matt","Premium Matt Colorbond","check",()=> (h<=2200?104:h<=2600?114:h<=3600?142:199)*lm(w)],["tap","Taper","check",()=>42*lm(w)],["rev","Reverse rolled","check",()=>w<=3100?105:149],["weather","Oversize weather seal","check",()=>8*lm(w)],["card","Hard cardboard cylinder stretch","check",()=>20*lm(w)],["shrink","Hard cardboard cylinder shrink","check",()=>27*lm(w)],["box","Box a Door packaging","check",()=>boxCost(w)],
+  ["pel","300mm pelmet","check",()=>w<=3100?105:113,"Steel-Line",400],
+  ["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450]
  ];return[]
 }
 function effectiveAddonSupplier(sup,type,w,h){
@@ -171,16 +182,21 @@ function renderAddons(preserve){
 }
 function refreshExtraComposerCost(){
  if(!$("extraChoice"))return;
- const choice=$("extraChoice").value;
+ const choice=$("extraChoice").value,label=$("extraMeasureLabel"),measure=$("extraMeasure");
  $("extraCost").readOnly=true;
- if(!choice){$("extraCost").value="";return}
- if(choice==="__custom"){$("extraCost").readOnly=false;$("extraCost").value="";return}
+ if(label)label.textContent=choice==="lhr"?"Headroom available mm *":"Size / measure";
+ if(measure){measure.placeholder=choice==="lhr"?"Enter exact headroom, e.g. 285":"e.g. 4800mm, 2 panels, pair";measure.inputMode=choice==="lhr"?"numeric":"text"}
+ if(!choice){$("extraCost").value="";$("extraPrice").value="";return}
+ if(choice==="__custom"){$("extraCost").readOnly=false;$("extraCost").value="";$("extraPrice").value="";return}
  const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h),d=defs(sup,type,w,h).find(function(x){return x[0]===choice});
- $("extraCost").value=d&&d[3]()!=null?Math.round(d[3]()):""
+ $("extraCost").value=d&&d[3]()!=null?Math.round(d[3]()):"";
+ $("extraPrice").value=d&&d[5]!=null?d[5]:""
 }
 function addExtraItem(){
- const choice=$("extraChoice").value,qty=Math.max(1,+$("extraQty").value||1),measure=$("extraMeasure").value.trim(),unitRetail=+$("extraPrice").value||0,enteredCost=+$("extraCost").value||0;
+ const choice=$("extraChoice").value,qty=Math.max(1,+$("extraQty").value||1),rawMeasure=$("extraMeasure").value.trim(),unitRetail=+$("extraPrice").value||0,enteredCost=+$("extraCost").value||0;
  if(!choice)return toast("Choose an extra first");
+ let measure=rawMeasure;
+ if(choice==="lhr"){const mm=parseFloat(rawMeasure);if(!Number.isFinite(mm)||mm<=0)return toast("Enter the exact headroom in mm");measure=Math.round(mm)+" mm"}
  if(unitRetail<=0)return toast("Technician must enter the customer price");
  const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h);
  let item;
@@ -215,7 +231,7 @@ function selectedAddons(){
  repriceCurrentExtras();let costTotal=0,retailTotal=0,names=[],items=[],review=false;
  currentExtras.forEach(function(i){
    const qty=Math.max(1,+i.qty||1),c=i.unitCost,unitRetail=+i.unitRetail||0,itemCost=c==null?0:c*qty,totalRetail=unitRetail*qty;
-   if(c==null||i.needsReview||unitRetail<=0)review=true;
+   if(c==null||i.needsReview||unitRetail<=0||(i.presetId==="lhr"&&!(parseFloat(i.measure)>0)))review=true;
    costTotal+=itemCost;retailTotal+=totalRetail;
    const display=i.name+(i.measure?" — "+i.measure:"");names.push(display+(qty>1?" ×"+qty:""));
    items.push(Object.assign({},i,{qty:qty,totalCost:c==null?null:itemCost,totalRetail:totalRetail,displayName:display}))
