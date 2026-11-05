@@ -1,6 +1,6 @@
 const DFLT={gst:10,fixedProfit:1200,seriesBProfit:1500,removalRetail:100,jayCost:215,jayRetail:450,superCost:280,superRetail:500,merlinCost:420,merlinRetail:650,grifcoCost:826,grifcoRetail:1100,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,bneRollerInstall:450,bneRollerRemove:550,bneSingleInstall:500,bneSingleRemove:600,bneMotorLabour:75,bneDoubleInstall:700,bneDoubleRemove:850,bneSpecialLift:300,bneDoubleWidth:3000,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
-const APP_VERSION="v21", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
+const APP_VERSION="v22", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
 const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
 let currentExtras=[],quoteDoors=[];
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
@@ -113,20 +113,31 @@ function motor(city,m){if(m==="Manual")return{name:"Manual",cost:0,retail:0};if(
 const lm=w=>w/1000,sqm=(w,h)=>w*h/1e6;
 function insulation(w,h){let wi=w<=3000?0:w<=5500?1:w<=6700?2:-1,hi=h<=2285?0:h<=2850?1:h<=3415?2:-1;return wi<0||hi<0?null:[[818,1039,1195],[1007,1290,1510],[1195,1447,1699]][hi][wi]}
 function boxCost(w){if(w<=2500)return 101;if(w<=2800)return 106;if(w<=3100)return 111;if(w<=3400)return 116;if(w<=3700)return 122;if(w<=4000)return 130;if(w<=4300)return 138;if(w<=4600)return 145;if(w<=4900)return 151;if(w<=5400)return 157;return null}
+function insulationRetail(w,h){const c=insulation(w,h);return c==null?null:Math.round(c*(1+S.gst/100)+300)}
+function headroomRule(type,motorChoice,mm,supplier){
+ if(type!=="Sectional")return{required:false,ok:true,label:"Not required",id:null,item:null};
+ mm=+mm||0;
+ if(mm<=0)return{required:true,ok:false,label:"Enter headroom",reason:"Headroom measurement is required for every Sectional door"};
+ const manual=motorChoice==="Manual",std=manual?290:340,front=manual?200:250,rear=manual?150:200;
+ let id,label,cost=0;
+ if(mm>=std){id="hdr_std";label="Standard headroom";cost=0}
+ else if(mm>=front){id="lhr_front";label="Low headroom — Front Mount";cost=supplier==="Centurion"?89:0}
+ else if(mm>=rear){id="lhr_rear";label="Low headroom — Rear Mount";cost=supplier==="Centurion"?89:0}
+ else return{required:true,ok:false,label:"Below supported headroom",reason:"Headroom "+mm+" mm is below the supported rear-mount minimum — call office / supplier"};
+ return{required:true,ok:true,id:id,label:label,mm:mm,minimums:{standard:std,front:front,rear:rear},item:{uid:"auto-headroom",presetId:id,name:label,measure:mm+" mm",qty:1,unitCost:cost,unitRetail:189,sourceSupplier:supplier||"Auto",needsReview:false,totalCost:cost,totalRetail:189,displayName:label+" — "+mm+" mm"}}
+}
 function defs(sup,type,w,h){
  if(sup==="Auto")return[];
  if(sup==="Steel-Line"&&type==="Sectional")return[
   ["matt","Colorbond Matt","check",()=>w<=3500?220:332],["wood","Colorbond Premium Woodlook","check",()=>w<=3500?220:368],["ranch","Ranch window insert","qty",()=>144],["stan","Stanford window insert","qty",()=>92],["herit","Heritage window insert","qty",()=>73],["tap","Taper","check",()=>w<=3500?159:258],
-  ["hdr_std","Standard headroom track setup","check",()=>0,"Steel-Line",189],["lhr_front","Low headroom — Front Mount","check",()=>0,"Steel-Line",189],["lhr_rear","Low headroom — Rear Mount","check",()=>0,"Steel-Line / confirm rear-mount supplier cost",189],
   ["pel250","250mm × 55mm pelmet","check",()=>156,"Steel-Line",400],["pel200","200mm pelmet + Quick Closers","check",()=>220,"Steel-Line",400],
-  ["coast","Coastal upgrade","check",()=>557],["ins","Mammoth insulation","check",()=>insulation(w,h)],
-  ["ins","Mammoth insulation — Steel-Line system","check",()=>insulation(w,h),"Steel-Line"],["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450],
+  ["coast","Coastal upgrade","check",()=>557],["ins","Mammoth insulation","check",()=>insulation(w,h),"Steel-Line"],["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450],
   ["c12524","Cover pair 125×70×2400","check",()=>83],["c12530","Cover pair 125×70×3000","check",()=>97],["c15024","Cover pair 150×70×2400","check",()=>86],["c15030","Cover pair 150×70×3000","check",()=>100]
  ];
  if(sup==="Centurion"&&type==="Sectional")return[
   ["side","Side track seals","check",()=>33],["reg","Regency window insert","qty",()=>86],["geo","Georgian window insert","qty",()=>170],["tap","Taper hinged >40mm","check",()=>134*lm(w)],["timba","Timbalook Premium finish","check",()=> (h<=2330?111:h<=2910?139:166)*lm(w)],["flex","Flexographic finish","check",()=>53*sqm(w,h)],["pow","Powdercoat finish","check",()=>53*sqm(w,h)],["weather","Oversize weather seal","check",()=>8*lm(w)],
-  ["hdr_std","Standard headroom track setup","check",()=>0,"Centurion",189],["lhr_front","Low headroom — Front Mount","check",()=>89,"Centurion",189],["lhr_rear","Low headroom — Rear Mount","check",()=>89,"Centurion / confirm rear-mount compatibility",189],
   ["pel250","250mm × 55mm pelmet","check",()=>156,"Steel-Line",400],["pel200","200mm pelmet + Quick Closers","check",()=>220,"Steel-Line",400],
+  ["ins","Mammoth insulation — Steel-Line system","check",()=>insulation(w,h),"Steel-Line"],
   ["j12524","Jamb pair 125×70×2400","check",()=>152,"Steel-Line",450],["j12530","Jamb pair 125×70×3000","check",()=>183,"Steel-Line",450],["j15024","Jamb pair 150×70×2400","check",()=>158,"Steel-Line",450],["j15030","Jamb pair 150×70×3000","check",()=>193,"Steel-Line",450]
  ];
  if(sup==="Steel-Line"&&type==="Roller")return[
@@ -185,20 +196,20 @@ function refreshExtraComposerCost(){
  if(!$("extraChoice"))return;
  const choice=$("extraChoice").value,label=$("extraMeasureLabel"),measure=$("extraMeasure");
  $("extraCost").readOnly=true;
- const needsHeadroom=choice==="lhr_front"||choice==="lhr_rear";
+ const needsHeadroom=false;
  if(label)label.textContent=needsHeadroom?"Headroom available mm *":"Size / measure";
  if(measure){measure.placeholder=needsHeadroom?"Enter exact headroom, e.g. 230":"e.g. 4800mm, 2 panels, pair";measure.inputMode=needsHeadroom?"numeric":"text"}
  if(!choice){$("extraCost").value="";$("extraPrice").value="";return}
  if(choice==="__custom"){$("extraCost").readOnly=false;$("extraCost").value="";$("extraPrice").value="";return}
  const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h),d=defs(sup,type,w,h).find(function(x){return x[0]===choice});
- $("extraCost").value=d&&d[3]()!=null?Math.round(d[3]()):"";
- $("extraPrice").value=d&&d[5]!=null?d[5]:""
+ const c=d&&d[3]()!=null?d[3]():null;
+ $("extraCost").value=c!=null?Math.round(c):"";
+ $("extraPrice").value=choice==="ins"?(c!=null?Math.round(c*(1+S.gst/100)+300):""):(d&&d[5]!=null?d[5]:"")
 }
 function addExtraItem(){
  const choice=$("extraChoice").value,qty=Math.max(1,+$("extraQty").value||1),rawMeasure=$("extraMeasure").value.trim(),unitRetail=+$("extraPrice").value||0,enteredCost=+$("extraCost").value||0;
  if(!choice)return toast("Choose an extra first");
  let measure=rawMeasure;
- if(choice==="lhr_front"||choice==="lhr_rear"){const mm=parseFloat(rawMeasure);if(!Number.isFinite(mm)||mm<=0)return toast("Enter the exact headroom in mm");measure=Math.round(mm)+" mm"}
  if(unitRetail<=0)return toast("Technician must enter the customer price");
  const type=$("doorType").value,w=+$("width").value||0,h=+$("height").value||0,sup=effectiveAddonSupplier($("supplier").value,type,w,h);
  let item;
@@ -233,7 +244,7 @@ function selectedAddons(){
  repriceCurrentExtras();let costTotal=0,retailTotal=0,names=[],items=[],review=false;
  currentExtras.forEach(function(i){
    const qty=Math.max(1,+i.qty||1),c=i.unitCost,unitRetail=+i.unitRetail||0,itemCost=c==null?0:c*qty,totalRetail=unitRetail*qty;
-   if(c==null||i.needsReview||unitRetail<=0||((i.presetId==="lhr_front"||i.presetId==="lhr_rear")&&!(parseFloat(i.measure)>0)))review=true;
+   if(c==null||i.needsReview||unitRetail<=0)review=true;
    costTotal+=itemCost;retailTotal+=totalRetail;
    const display=i.name+(i.measure?" — "+i.measure:"");names.push(display+(qty>1?" ×"+qty:""));
    items.push(Object.assign({},i,{qty:qty,totalCost:c==null?null:itemCost,totalRetail:totalRetail,displayName:display}))
@@ -254,7 +265,7 @@ function composeQuote(current){
 function quoteSummary(q){
  const lines=[S.businessName.toUpperCase(),q.businessPhone?"Phone: "+q.businessPhone:null,q.businessEmail?"Email: "+q.businessEmail:null,q.businessWebsite?"Web: "+q.businessWebsite:null,q.quoteNo?"Quote: "+q.quoteNo:null,q.customer?"Customer: "+q.customer:null,q.suburb?"Location: "+q.suburb:null,""];
  q.doors.forEach(function(d,i){
-   lines.push("DOOR "+(i+1)+" — "+d.type.toUpperCase()+(d.series?" SERIES "+d.series:""),"Width: "+d.w+" mm","Height: "+d.h+" mm","Colour: "+(d.colour||"—"),"Profile: "+(d.profile||"—"),"Motor: "+d.motor,"Removal of existing door: "+(d.removal?"Yes":"No"));
+   lines.push("DOOR "+(i+1)+" — "+d.type.toUpperCase()+(d.series?" SERIES "+d.series:""),"Width: "+d.w+" mm","Height: "+d.h+" mm",d.type==="Sectional"?"Headroom: "+(d.headroom||"—")+" mm — "+(d.headroomSetup||"") : null,"Colour: "+(d.colour||"—"),"Profile: "+(d.profile||"—"),"Motor: "+d.motor,"Removal of existing door: "+(d.removal?"Yes":"No"));
    if(d.addonItems&&d.addonItems.length)lines.push("Extras: "+d.addonItems.map(function(x){return (x.displayName||x.name)+(x.qty>1?" ×"+x.qty:"")}).join(", "));
    if(d.notes)lines.push("Notes: "+d.notes);
    lines.push("Door total: "+money(d.issue)+" incl. GST","")
@@ -270,8 +281,9 @@ function renderDoorItems(){
  }).join("")
 }
 function calc(){
- const city=$("city").value,type=$("doorType").value,sup=$("supplier").value,w=+$("width").value||0,h=+$("height").value||0,hasSize=w>0&&h>0,b=hasSize?base(type,w,h,sup):{ok:false,c:{}},mi=motor(city,$("motor").value),ad=selectedAddons(),rem=$("removal").value==="Yes",specialLift=$("specialLift")&&$("specialLift").value==="Yes",labour=installationCost(city,type,w,h,rem,mi.name,specialLift),ta=labour.ok?labour.cost:0,spec=validateRequiredSpecs(),contact=cityContact(city);
- let review=hasSize&&(!b.ok||!labour.ok||ad.review||!spec.ok),reason=!hasSize?"Enter door width and height":(!spec.ok?spec.reason:(!b.ok?(b.reason||"Size is outside automatic supplier pricing"):(!labour.ok?labour.label:(ad.review?"Selected extra needs cost/customer price review":""))));
+ const city=$("city").value,type=$("doorType").value,sup=$("supplier").value,w=+$("width").value||0,h=+$("height").value||0,hasSize=w>0&&h>0,b=hasSize?base(type,w,h,sup):{ok:false,c:{}},mi=motor(city,$("motor").value),ad=selectedAddons(),rem=$("removal").value==="Yes",specialLift=$("specialLift")&&$("specialLift").value==="Yes",labour=installationCost(city,type,w,h,rem,mi.name,specialLift),ta=labour.ok?labour.cost:0,spec=validateRequiredSpecs(),contact=cityContact(city),headroom=+$("headroom").value||0,addonSupplier=hasSize?effectiveAddonSupplier(sup,type,w,h):sup,hr=headroomRule(type,$("motor").value,headroom,addonSupplier);
+ if(hr.item){ad.costTotal+=hr.item.totalCost;ad.retailTotal+=hr.item.totalRetail;ad.names.push(hr.item.displayName);ad.items.unshift(hr.item)}
+ let review=hasSize&&(!b.ok||!labour.ok||ad.review||!spec.ok||!hr.ok),reason=!hasSize?"Enter door width and height":(!spec.ok?spec.reason:(!hr.ok?hr.reason:(!b.ok?(b.reason||"Size is outside automatic supplier pricing"):(!labour.ok?labour.label:(ad.review?"Selected extra needs cost/customer price review":"")))));
  let rec=0,min=0,targetProfit=hasSize&&b.ok&&type==="Roller"&&b.series==="B"?S.seriesBProfit:S.fixedProfit;
  if(hasSize&&b.ok){
    const gst=1+S.gst/100,pricingBase=b.cost+mi.retail+ta+(rem?S.removalRetail:0),extraRevenue=ad.retailTotal;
@@ -285,8 +297,8 @@ function calc(){
  const baseProfit=hasSize&&b.ok&&issue?((issue-ad.retailTotal)/(1+S.gst/100)-b.cost-mi.retail-ta-(rem?S.removalRetail:0)):null;
  const extrasProfit=hasSize&&b.ok&&issue?(ad.retailTotal/(1+S.gst/100)-ad.costTotal):null;
  const margin=baseProfit==null?null:baseProfit+(extrasProfit||0);
- const q={quoteNo:$("quoteNo").value.trim(),customer:$("customer").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),suburb:$("suburb").value.trim(),city:city,type:type,series:b.series||"",supplier:sup,w:w,h:h,colour:spec.colour,profile:spec.profile,motor:mi.name,addons:ad.names.join("; "),addonItems:ad.items,addonCostTotal:ad.costTotal,addonRetailTotal:ad.retailTotal,removal:rem,removalRetail:rem?S.removalRetail:0,specialLift:specialLift,installationCost:ta,installationLabel:labour.label,motorRetail:mi.retail,customExtra:0,notes:$("notes").value.trim(),recommended:rec,minimum:min,issue:issue,status:hasSize&&!review?"APPROVED":"CALL OFFICE",margin:margin,baseProfit:baseProfit,extrasProfit:extrasProfit,targetProfit:(hasSize&&b.ok?targetProfit:null),businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity};
- $("recommended").textContent=hasSize?(rec?money(rec):"REVIEW"):"—";$("minimum").textContent=min?money(min):"—";$("issue").textContent=issue?money(issue):"—";$("basisSupplier").textContent=hasSize&&b.ok?b.basis:"—";$("motorName").textContent=mi.name;
+ const q={quoteNo:$("quoteNo").value.trim(),customer:$("customer").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),suburb:$("suburb").value.trim(),city:city,type:type,series:b.series||"",supplier:sup,w:w,h:h,headroom:type==="Sectional"?headroom:null,headroomSetup:type==="Sectional"?(hr.label||""):null,colour:spec.colour,profile:spec.profile,motor:mi.name,addons:ad.names.join("; "),addonItems:ad.items,addonCostTotal:ad.costTotal,addonRetailTotal:ad.retailTotal,removal:rem,removalRetail:rem?S.removalRetail:0,specialLift:specialLift,installationCost:ta,installationLabel:labour.label,motorRetail:mi.retail,customExtra:0,notes:$("notes").value.trim(),recommended:rec,minimum:min,issue:issue,status:hasSize&&!review?"APPROVED":"CALL OFFICE",margin:margin,baseProfit:baseProfit,extrasProfit:extrasProfit,targetProfit:(hasSize&&b.ok?targetProfit:null),businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity};
+ $("recommended").textContent=hasSize?(rec?money(rec):"REVIEW"):"—";$("minimum").textContent=min?money(min):"—";$("issue").textContent=issue?money(issue):"—";$("basisSupplier").textContent=hasSize&&b.ok?b.basis:"—";$("motorName").textContent=mi.name;if($("headroomResult")){$("headroomResult").textContent=type==="Sectional"?(hr.ok?hr.label+" — "+headroom+" mm":(hr.reason||"Enter headroom")):"Not required for Roller";$("headroomResult").className="note "+(type==="Sectional"&&!hr.ok?"warning":"")}
  $("steelCost").textContent=b.c&&b.c["Steel-Line"]?money(b.c["Steel-Line"].cost):"—";$("centCost").textContent=b.c&&b.c.Centurion?money(b.c.Centurion.cost):"—";$("addonCost").textContent=money(ad.costTotal);$("techCost").textContent=hasSize&&labour.ok?money(ta):"REVIEW";$("motorCost").textContent=money(mi.cost);$("margin").textContent=margin==null?"—":money(margin);$("margin").style.color=margin==null?"":(baseProfit!=null&&baseProfit+0.5<targetProfit?"#b42318":"#177a3d");if($("targetProfit"))$("targetProfit").textContent=hasSize&&b.ok?money(targetProfit):"—";if($("baseProfit"))$("baseProfit").textContent=baseProfit==null?"—":money(baseProfit);if($("extrasProfit"))$("extrasProfit").textContent=extrasProfit==null?"—":money(extrasProfit);
  const st=$("status");st.className="status "+(hasSize?(review?"bad":"good"):(quoteDoors.length?"good":"bad"));st.textContent=hasSize?(review?"CALL OFFICE — "+reason:"READY — current door can be quoted"):(quoteDoors.length?"READY — "+quoteDoors.length+" completed door(s) in quote":"ENTER CURRENT DOOR DETAILS");
  $("supplierAdvice").textContent=hasSize&&b.ok?((sup==="Auto"?"Auto selected "+b.recommended:"Pricing basis: "+sup)+(b.series?" Series "+b.series:"")+" at "+money(b.cost)+" ex GST. Target business profit: "+money(targetProfit)+" ex GST. Selected extras supplier cost: "+money(ad.costTotal)+" ex GST; customer extra line values: "+money(ad.retailTotal)+" incl. GST."):"";
@@ -300,13 +312,13 @@ function addCurrentDoor(){
  quoteDoors.push(structuredCloneSafe(q));clearCurrentDoor();saveDraft();calc();toast("Door added — start the next door")
 }
 function clearCurrentDoor(){
- $("doorType").value="Sectional";$("supplier").value="Auto";$("width").value="";$("height").value="";$("motor").value="Standard Motor";$("removal").value="No";if($("specialLift"))$("specialLift").value="No";$("notes").value="";$("finalOffer").value="";
+ $("doorType").value="Sectional";$("supplier").value="Auto";$("width").value="";$("height").value="";if($("headroom"))$("headroom").value="";$("motor").value="Standard Motor";$("removal").value="No";if($("specialLift"))$("specialLift").value="No";$("notes").value="";$("finalOffer").value="";
  currentExtras=[];populateColourProfile(false);renderAddons(false)
 }
 function editDoor(i){
  const d=quoteDoors[i];if(!d)return;
  const current=calc();if(doorStarted(current)&&!confirm("Replace the current unfinished door with Door "+(i+1)+"?"))return;
- quoteDoors.splice(i,1);$("doorType").value=d.type;$("supplier").value=d.supplier;$("width").value=d.w;$("height").value=d.h;$("motor").value=(d.motor==="JayTech"||d.motor==="Superlift")?"Standard Motor":d.motor;$("removal").value=d.removal?"Yes":"No";if($("specialLift"))$("specialLift").value=d.specialLift?"Yes":"No";$("notes").value=d.notes||"";$("finalOffer").value=d.issue&&d.issue!==d.recommended?d.issue:"";
+ quoteDoors.splice(i,1);$("doorType").value=d.type;$("supplier").value=d.supplier;$("width").value=d.w;$("height").value=d.h;if($("headroom"))$("headroom").value=d.headroom||"";$("motor").value=(d.motor==="JayTech"||d.motor==="Superlift")?"Standard Motor":d.motor;$("removal").value=d.removal?"Yes":"No";if($("specialLift"))$("specialLift").value=d.specialLift?"Yes":"No";$("notes").value=d.notes||"";$("finalOffer").value=d.issue&&d.issue!==d.recommended?d.issue:"";
  populateColourProfile(false);$("doorColour").value=d.colour||"";$("doorProfile").value=d.profile||"";
  currentExtras=(d.addonItems||[]).map(function(x){return Object.assign({},x,{uid:x.uid||uid()})});
  renderAddons(false);saveDraft();calc();window.scrollTo({top:0,behavior:"smooth"})
@@ -315,14 +327,14 @@ function removeDoor(i){if(!quoteDoors[i])return;if(confirm("Remove Door "+(i+1)+
 function safeWrite(key,value){try{const prev=localStorage.getItem(key);if(prev!==null)localStorage.setItem(key+"_backup",prev);localStorage.setItem(key,value)}catch(e){}}
 function saveDraft(){
  if(new URLSearchParams(location.search).get("quote"))return;
- const ids=["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","specialLift","notes","finalOffer"],fields={};
+ const ids=["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","headroom","doorColour","doorProfile","motor","removal","specialLift","notes","finalOffer"],fields={};
  ids.forEach(function(id){if($(id))fields[id]=$(id).value});
  safeWrite(DRAFT_KEY,JSON.stringify({version:APP_VERSION,fields:fields,currentExtras:currentExtras,quoteDoors:quoteDoors,updatedAt:new Date().toISOString()}))
 }
 function restoreDraft(){
  try{
   const d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");if(!d||!d.fields)return false;
-  ["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","motor","removal","specialLift","notes","finalOffer"].forEach(function(id){if($(id)&&d.fields[id]!==undefined)$(id).value=d.fields[id]});
+  ["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","headroom","motor","removal","specialLift","notes","finalOffer"].forEach(function(id){if($(id)&&d.fields[id]!==undefined)$(id).value=d.fields[id]});
   populateColourProfile(false);if(d.fields.doorColour!==undefined)$("doorColour").value=d.fields.doorColour;if(d.fields.doorProfile!==undefined)$("doorProfile").value=d.fields.doorProfile;
   currentExtras=Array.isArray(d.currentExtras)?d.currentExtras:[];quoteDoors=Array.isArray(d.quoteDoors)?d.quoteDoors:[];
   return true
@@ -371,7 +383,7 @@ async function buildPdfQuote(){
  q.doors.forEach(function(d,i){
    ensure(49);doc.setFillColor.apply(doc,navy);doc.roundedRect(M,y,PW-2*M,8,2,2,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text("DOOR "+(i+1)+" — "+String(d.type||"").toUpperCase()+(d.series?" SERIES "+String(d.series).toUpperCase():""),M+4,y+5.5);doc.setTextColor.apply(doc,yellow);doc.text(pdfMoney(d.issue)+" incl. GST",PW-M-4,y+5.5,{align:"right"});y+=11;
    doc.setDrawColor.apply(doc,line);doc.setFillColor(255,255,255);doc.roundedRect(M,y,PW-2*M,31,2,2,"FD");
-   const left=M+5,right=M+95,rowsL=[["Width",d.w+" mm"],["Height",d.h+" mm"],["Colour",d.colour],["Profile / style",d.profile]],rowsR=[["Motor",d.motor],["Removal",d.removal?"Included":"Not included"],["Extras",(d.addonItems||[]).length+" item(s)"],["Installation","Supply & install"]];
+   const left=M+5,right=M+95,rowsL=[["Width",d.w+" mm"],["Height",d.h+" mm"],["Colour",d.colour],[d.type==="Sectional"?"Headroom":"Profile / style",d.type==="Sectional"?(d.headroom+" mm — "+d.headroomSetup):d.profile]],rowsR=[["Motor",d.motor],["Removal",d.removal?"Included":"Not included"],["Extras",(d.addonItems||[]).length+" item(s)"],["Installation","Supply & install"]];
    rowsL.forEach(function(r,j){const yy=y+6+j*6.3;doc.setFont("helvetica","normal");doc.setFontSize(7.6);doc.setTextColor.apply(doc,muted);doc.text(r[0],left,yy);doc.setFont("helvetica","bold");doc.setTextColor.apply(doc,ink);doc.text(String(r[1]||"-").slice(0,38),left+25,yy)});
    rowsR.forEach(function(r,j){const yy=y+6+j*6.3;doc.setFont("helvetica","normal");doc.setFontSize(7.6);doc.setTextColor.apply(doc,muted);doc.text(r[0],right,yy);doc.setFont("helvetica","bold");doc.setTextColor.apply(doc,ink);doc.text(String(r[1]||"-").slice(0,31),right+28,yy)});y+=37
  });
@@ -465,7 +477,7 @@ function bindInputs(){
 async function registerAppWorker(){
  if(!("serviceWorker" in navigator)||location.protocol==="file:")return;
  try{
-   const reg=await navigator.serviceWorker.register("./sw.js?v=21");await reg.update();
+   const reg=await navigator.serviceWorker.register("./sw.js?v=22");await reg.update();
    let reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload()})
  }catch(e){}
 }
@@ -482,7 +494,7 @@ function decodeQuote(x){try{let v=x.replace(/-/g,"+").replace(/_/g,"/");while(v.
 
 function customerUrl(){
  const q=getFullQuote();if(q.status!=="APPROVED"||!q.doors.length){toast("Complete all doors before sharing");return""}
- const publicQ={quoteNo:q.quoteNo,customer:q.customer,suburb:q.suburb,city:q.city,doors:q.doors.map(function(d){return{type:d.type,series:d.series,w:d.w,h:d.h,colour:d.colour,profile:d.profile,motor:d.motor,removal:d.removal,addonItems:(d.addonItems||[]).map(function(i){return{name:i.name,displayName:i.displayName,measure:i.measure,qty:i.qty,totalRetail:i.totalRetail}}),notes:d.notes,issue:d.issue}}),issue:q.issue,businessName:S.businessName,businessPhone:q.businessPhone,businessEmail:q.businessEmail,businessWebsite:q.businessWebsite,quoteValidity:S.quoteValidity,created:new Date().toISOString()};
+ const publicQ={quoteNo:q.quoteNo,customer:q.customer,suburb:q.suburb,city:q.city,doors:q.doors.map(function(d){return{type:d.type,series:d.series,w:d.w,h:d.h,headroom:d.headroom,headroomSetup:d.headroomSetup,colour:d.colour,profile:d.profile,motor:d.motor,removal:d.removal,addonItems:(d.addonItems||[]).map(function(i){return{name:i.name,displayName:i.displayName,measure:i.measure,qty:i.qty,totalRetail:i.totalRetail}}),notes:d.notes,issue:d.issue}}),issue:q.issue,businessName:S.businessName,businessPhone:q.businessPhone,businessEmail:q.businessEmail,businessWebsite:q.businessWebsite,quoteValidity:S.quoteValidity,created:new Date().toISOString()};
  const url=location.origin+location.pathname+"?quote="+encodeURIComponent(encodeQuote(publicQ));if(url.length>7000){toast("This quote is too large for a customer link — use Share PDF");return""}return url
 }
 async function shareCustomerLink(){
