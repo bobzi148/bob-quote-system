@@ -1,6 +1,6 @@
 const DFLT={gst:10,fixedProfit:1200,seriesBProfit:1500,removalRetail:100,jayCost:215,jayRetail:450,superCost:280,superRetail:500,merlinCost:420,merlinRetail:650,grifcoCost:826,grifcoRetail:1100,techRollerSmall:500,techRollerLarge:650,techSectionalSmall:550,techSectionalMed:650,techSectionalLarge:700,bneRollerInstall:450,bneRollerRemove:550,bneSingleInstall:500,bneSingleRemove:600,bneMotorLabour:75,bneDoubleInstall:700,bneDoubleRemove:850,bneSpecialLift:300,bneDoubleWidth:3000,businessName:"B.O.B Garage Doors",perthPhone:"08 6256 4417",perthEmail:"info@bobgaragedoorswa.com",perthWebsite:"bobgaragedoorswa.com",brisbanePhone:"",brisbaneEmail:"bobgaragedoors1@gmail.com",brisbaneWebsite:"bobgaragedoors.com",quoteValidity:14,adminPin:""};
 let S=loadSettings();
-const APP_VERSION="v22", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
+const APP_VERSION="v23", DRAFT_KEY="bob_quote_draft_v10", QUOTES_KEY="bob_v3_quotes";
 const ROLE_LOCK=["tech","admin"].includes(new URLSearchParams(location.search).get("role"))?new URLSearchParams(location.search).get("role"):"";
 let currentExtras=[],quoteDoors=[];
 const steelSec={w:[[1350,3000],[3005,3500],[3505,4500],[4505,5000],[5005,5300],[5305,5650],[5655,6200],[6205,6500]],h:[[0,2280],[2285,2440],[2445,2740],[2745,3400]],p:[[1047,1206,1359,1387,1422,1547,2037,2280],[1125,1269,1483,1510,1585,1739,2277,2538],[1200,1354,1635,1775,1824,1987,2475,3065],[1544,1829,2030,2336,2434,2814,3045,3278]]};
@@ -67,6 +67,28 @@ function validateRequiredSpecs(){
  const colour=$("doorColour")?.value.trim()||"",profile=$("doorProfile")?.value.trim()||"";
  return {ok:!!colour&&!!profile,colour,profile,reason:!colour&&!profile?"Select door colour and profile":!colour?"Select door colour":"Select door profile / style"};
 }
+function validateRequiredQuoteFields(){
+ const required=[
+  ["jobNumber","Job number"],["customer","Name"],["phone","Mobile"],["email","Email"],["suburb","Address"],["city","City"],
+  ["doorType","Door type"],["supplier","Supplier"],["width","Door width"],["height","Door height"],
+  ["openingWidth","Opening width"],["openingHeightLeft","Opening height L"],["openingHeightRight","Opening height R"],
+  ["headroom","Headroom"],["sideRoomLeft","Side room L"],["sideRoomRight","Side room R"],
+  ["doorColour","Door colour"],["doorProfile","Profile"],["motor","Motor"],["removal","Removal"],["extraDecision","Extras"],["notes","Notes"]
+ ];
+ let missing=null;
+ required.forEach(function(pair){
+   const el=$(pair[0]);if(!el)return;
+   const v=String(el.value||"").trim(),numeric=["width","height","openingWidth","openingHeightLeft","openingHeightRight","headroom","sideRoomLeft","sideRoomRight"].includes(pair[0]);
+   const bad=!v||(numeric&&!(+v>0));
+   el.classList.toggle("required-missing",bad);
+   if(!missing&&bad)missing=pair[1];
+ });
+ const email=$("email")?.value.trim()||"";if(!missing&&email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){missing="Valid email";$("email").classList.add("required-missing")}
+ const extras=$("extraDecision")?.value||"";
+ if(!missing&&extras==="Add extras"&&!currentExtras.length)missing="At least one extra";
+ if(!missing&&extras==="No extras"&&currentExtras.length)missing="Extras selection";
+ return{ok:!missing,reason:missing?("Complete required field: "+missing):""}
+}
 
 function idx(n,a){return a.findIndex(b=>n>=b[0]&&n<=b[1])} function ceilStd(h,a){return a.find(v=>h<=v)??null}
 function matrixCost(M,w,h){w=norm5(w);h=norm5(h);const wi=idx(w,M.w),hi=idx(h,M.h);return wi<0||hi<0?null:{cost:M.p[hi][wi],chargedW:w,chargedH:h}}
@@ -115,8 +137,9 @@ function insulation(w,h){let wi=w<=3000?0:w<=5500?1:w<=6700?2:-1,hi=h<=2285?0:h<
 function boxCost(w){if(w<=2500)return 101;if(w<=2800)return 106;if(w<=3100)return 111;if(w<=3400)return 116;if(w<=3700)return 122;if(w<=4000)return 130;if(w<=4300)return 138;if(w<=4600)return 145;if(w<=4900)return 151;if(w<=5400)return 157;return null}
 function insulationRetail(w,h){const c=insulation(w,h);return c==null?null:Math.round(c*(1+S.gst/100)+300)}
 function headroomRule(type,motorChoice,mm,supplier){
- if(type!=="Sectional")return{required:false,ok:true,label:"Not required",id:null,item:null};
  mm=+mm||0;
+ if(type!=="Sectional"){if(mm<=0)return{required:true,ok:false,label:"Enter headroom",reason:"Headroom measurement is required"};return{required:true,ok:true,label:"Measured headroom",id:null,item:null,mm:mm}}
+
  if(mm<=0)return{required:true,ok:false,label:"Enter headroom",reason:"Headroom measurement is required for every Sectional door"};
  const manual=motorChoice==="Manual",std=manual?290:340,front=manual?200:250,rear=manual?150:200;
  let id,label,cost=0;
@@ -222,7 +245,7 @@ function addExtraItem(){
    const c=d[3]();if(c==null)return toast("This extra needs office pricing review");
    item={uid:uid(),presetId:d[0],name:d[1],measure:measure,qty:qty,unitCost:c,unitRetail:unitRetail,sourceSupplier:d[4]||sup,needsReview:false}
  }
- currentExtras.push(item);
+ currentExtras.push(item);if($("extraDecision"))$("extraDecision").value="Add extras";
  $("extraChoice").value="";$("extraDescription").value="";$("extraMeasure").value="";$("extraQty").value=1;$("extraCost").value="";$("extraPrice").value="";
  renderAddons(false);calc();saveDraft();toast("Extra added")
 }
@@ -230,7 +253,8 @@ function renderExtraItems(){
  if(!$("extraItemsList"))return;
  if(!currentExtras.length){$("extraItemsList").innerHTML='<div class="hint">No extras added to this door yet.</div>';return}
  $("extraItemsList").innerHTML=currentExtras.map(function(i){
-   return '<div class="extra-item"><div><div class="extra-title">'+safe(i.name)+'</div><div class="extra-meta">'+(i.measure?safe(i.measure)+" • ":"")+(i.sourceSupplier?safe(i.sourceSupplier)+" • ":"")+"Internal cost "+money(i.unitCost||0)+" ex GST"+'</div></div><input data-extra-field="measure" data-extra-id="'+i.uid+'" aria-label="Size or measure" value="'+safe(i.measure||"")+'"><input data-extra-field="qty" data-extra-id="'+i.uid+'" aria-label="Quantity" type="number" min="1" step="1" value="'+(i.qty||1)+'"><input data-extra-field="unitRetail" data-extra-id="'+i.uid+'" aria-label="Customer price" type="number" min="0" step="10" value="'+(i.unitRetail||0)+'"><button class="remove-extra" data-remove-extra="'+i.uid+'" title="Remove extra">×</button></div>'
+   const meta=ROLE_LOCK==="tech"?(i.measure?safe(i.measure):"Customer extra"):(i.measure?safe(i.measure)+" • ":"")+(i.sourceSupplier?safe(i.sourceSupplier)+" • ":"")+"Internal cost "+money(i.unitCost||0)+" ex GST";
+   return '<div class="extra-item"><div><div class="extra-title">'+safe(i.name)+'</div><div class="extra-meta">'+meta+'</div></div><input data-extra-field="measure" data-extra-id="'+i.uid+'" aria-label="Size or measure" value="'+safe(i.measure||"")+'"><input data-extra-field="qty" data-extra-id="'+i.uid+'" aria-label="Quantity" type="number" min="1" step="1" value="'+(i.qty||1)+'"><input data-extra-field="unitRetail" data-extra-id="'+i.uid+'" aria-label="Customer price" type="number" min="0" step="10" value="'+(i.unitRetail||0)+'"><button class="remove-extra" data-remove-extra="'+i.uid+'" title="Remove extra">×</button></div>'
  }).join("");
  document.querySelectorAll("[data-extra-field]").forEach(function(el){el.addEventListener("change",function(){updateExtraItem(el.dataset.extraId,el.dataset.extraField,el.value)})});
  document.querySelectorAll("[data-remove-extra]").forEach(function(el){el.addEventListener("click",function(){removeExtraItem(el.dataset.removeExtra)})})
@@ -240,7 +264,7 @@ function updateExtraItem(id,field,value){
  if(field==="qty")i.qty=Math.max(1,+value||1);else if(field==="unitRetail")i.unitRetail=+value||0;else i[field]=value;
  calc();saveDraft()
 }
-function removeExtraItem(id){currentExtras=currentExtras.filter(function(x){return x.uid!==id});renderExtraItems();calc();saveDraft()}
+function removeExtraItem(id){currentExtras=currentExtras.filter(function(x){return x.uid!==id});if($("extraDecision")&&!currentExtras.length&&$("extraDecision").value==="Add extras")$("extraDecision").value="";renderExtraItems();calc();saveDraft()}
 function selectedAddons(){
  repriceCurrentExtras();let costTotal=0,retailTotal=0,names=[],items=[],review=false;
  currentExtras.forEach(function(i){
@@ -261,12 +285,12 @@ function composeQuote(current){
  if(doorStarted(current))doors.push(structuredCloneSafe(current));
  const contact=cityContact($("city").value),issue=doors.reduce(function(a,d){return a+(+d.issue||0)},0),minimum=doors.reduce(function(a,d){return a+(+d.minimum||0)},0),recommended=doors.reduce(function(a,d){return a+(+d.recommended||0)},0);
  const status=doors.length&&doors.every(function(d){return d.status==="APPROVED"})?"APPROVED":"CALL OFFICE";
- return{quoteNo:$("quoteNo").value.trim(),customer:$("customer").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),suburb:$("suburb").value.trim(),city:$("city").value,doors:doors,issue:issue,minimum:minimum,recommended:recommended,status:status,businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity}
+ return{quoteNo:$("quoteNo").value.trim(),jobNumber:$("jobNumber")?$("jobNumber").value.trim():"",customer:$("customer").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),address:$("suburb").value.trim(),suburb:$("suburb").value.trim(),city:$("city").value,doors:doors,issue:issue,minimum:minimum,recommended:recommended,status:status,businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity}
 }
 function quoteSummary(q){
- const lines=[S.businessName.toUpperCase(),q.businessPhone?"Phone: "+q.businessPhone:null,q.businessEmail?"Email: "+q.businessEmail:null,q.businessWebsite?"Web: "+q.businessWebsite:null,q.quoteNo?"Quote: "+q.quoteNo:null,q.customer?"Customer: "+q.customer:null,q.suburb?"Location: "+q.suburb:null,""];
+ const lines=[S.businessName.toUpperCase(),q.businessPhone?"Phone: "+q.businessPhone:null,q.businessEmail?"Email: "+q.businessEmail:null,q.businessWebsite?"Web: "+q.businessWebsite:null,q.quoteNo?"Quote: "+q.quoteNo:null,q.jobNumber?"Job #: "+q.jobNumber:null,q.customer?"Customer: "+q.customer:null,q.address?"Address: "+q.address:null,""];
  q.doors.forEach(function(d,i){
-   lines.push("DOOR "+(i+1)+" — "+d.type.toUpperCase()+(d.series?" SERIES "+d.series:""),"Width: "+d.w+" mm","Height: "+d.h+" mm",d.type==="Sectional"?"Headroom: "+(d.headroom||"—")+" mm — "+(d.headroomSetup||"") : null,"Colour: "+(d.colour||"—"),"Profile: "+(d.profile||"—"),"Motor: "+d.motor,"Removal of existing door: "+(d.removal?"Yes":"No"));
+   lines.push("DOOR "+(i+1)+" — "+d.type.toUpperCase()+(d.series?" SERIES "+d.series:""),"Door width: "+d.w+" mm","Door height: "+d.h+" mm","Opening: "+d.openingWidth+"W × "+d.openingHeightLeft+"H L / "+d.openingHeightRight+"H R","Headroom: "+(d.headroom||"—")+" mm"+(d.headroomSetup?" — "+d.headroomSetup:""),"Side room: "+d.sideRoomLeft+" mm L / "+d.sideRoomRight+" mm R","Colour: "+(d.colour||"—"),"Profile: "+(d.profile||"—"),"Motor: "+d.motor,"Removal of existing door: "+(d.removal?"Yes":"No"));
    if(d.addonItems&&d.addonItems.length)lines.push("Extras: "+d.addonItems.map(function(x){return (x.displayName||x.name)+(x.qty>1?" ×"+x.qty:"")}).join(", "));
    if(d.notes)lines.push("Notes: "+d.notes);
    lines.push("Door total: "+money(d.issue)+" incl. GST","")
@@ -282,9 +306,9 @@ function renderDoorItems(){
  }).join("")
 }
 function calc(){
- const city=$("city").value,type=$("doorType").value,sup=$("supplier").value,w=+$("width").value||0,h=+$("height").value||0,hasSize=w>0&&h>0,b=hasSize?base(type,w,h,sup):{ok:false,c:{}},mi=motor(city,$("motor").value),ad=selectedAddons(),rem=$("removal").value==="Yes",specialLift=$("specialLift")&&$("specialLift").value==="Yes",labour=installationCost(city,type,w,h,rem,mi.name,specialLift),ta=labour.ok?labour.cost:0,spec=validateRequiredSpecs(),contact=cityContact(city),headroom=+$("headroom").value||0,addonSupplier=hasSize?effectiveAddonSupplier(sup,type,w,h):sup,hr=headroomRule(type,$("motor").value,headroom,addonSupplier);
+ const city=$("city").value,type=$("doorType").value,sup=$("supplier").value,w=+$("width").value||0,h=+$("height").value||0,hasSize=w>0&&h>0,b=hasSize?base(type,w,h,sup):{ok:false,c:{}},mi=motor(city,$("motor").value),ad=selectedAddons(),rem=$("removal").value==="Yes",specialLift=$("specialLift")&&$("specialLift").value==="Yes",labour=installationCost(city,type,w,h,rem,mi.name,specialLift),ta=labour.ok?labour.cost:0,spec=validateRequiredSpecs(),required=validateRequiredQuoteFields(),contact=cityContact(city),headroom=+$("headroom").value||0,addonSupplier=hasSize?effectiveAddonSupplier(sup,type,w,h):sup,hr=headroomRule(type,$("motor").value,headroom,addonSupplier);
  if(hr.item){ad.costTotal+=hr.item.totalCost;ad.retailTotal+=hr.item.totalRetail;ad.names.push(hr.item.displayName);ad.items.unshift(hr.item)}
- let review=hasSize&&(!b.ok||!labour.ok||ad.review||!spec.ok||!hr.ok),reason=!hasSize?"Enter door width and height":(!spec.ok?spec.reason:(!hr.ok?hr.reason:(!b.ok?(b.reason||"Size is outside automatic supplier pricing"):(!labour.ok?labour.label:(ad.review?"Selected extra needs cost/customer price review":"")))));
+ let review=!required.ok||!hasSize||!b.ok||!labour.ok||ad.review||!spec.ok||!hr.ok,reason=!required.ok?required.reason:(!hasSize?"Enter door width and height":(!spec.ok?spec.reason:(!hr.ok?hr.reason:(!b.ok?(b.reason||"Size is outside automatic supplier pricing"):(!labour.ok?labour.label:(ad.review?"Selected extra needs cost/customer price review":""))))));
  let rec=0,min=0,targetProfit=hasSize&&b.ok&&type==="Roller"&&b.series==="B"?S.seriesBProfit:S.fixedProfit;
  if(hasSize&&b.ok){
    const gst=1+S.gst/100,pricingBase=b.cost+mi.retail+ta+(rem?S.removalRetail:0),extraRevenue=ad.retailTotal;
@@ -298,7 +322,7 @@ function calc(){
  const baseProfit=hasSize&&b.ok&&issue?((issue-ad.retailTotal)/(1+S.gst/100)-b.cost-mi.retail-ta-(rem?S.removalRetail:0)):null;
  const extrasProfit=hasSize&&b.ok&&issue?(ad.retailTotal/(1+S.gst/100)-ad.costTotal):null;
  const margin=baseProfit==null?null:baseProfit+(extrasProfit||0);
- const q={quoteNo:$("quoteNo").value.trim(),customer:$("customer").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),suburb:$("suburb").value.trim(),city:city,type:type,series:b.series||"",supplier:sup,w:w,h:h,headroom:type==="Sectional"?headroom:null,headroomSetup:type==="Sectional"?(hr.label||""):null,colour:spec.colour,profile:spec.profile,motor:mi.name,addons:ad.names.join("; "),addonItems:ad.items,addonCostTotal:ad.costTotal,addonRetailTotal:ad.retailTotal,removal:rem,removalRetail:rem?S.removalRetail:0,specialLift:specialLift,installationCost:ta,installationLabel:labour.label,motorRetail:mi.retail,customExtra:0,notes:$("notes").value.trim(),recommended:rec,minimum:min,issue:issue,status:hasSize&&!review?"APPROVED":"CALL OFFICE",margin:margin,baseProfit:baseProfit,extrasProfit:extrasProfit,targetProfit:(hasSize&&b.ok?targetProfit:null),businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity};
+ const q={quoteNo:$("quoteNo").value.trim(),customer:$("customer").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),suburb:$("suburb").value.trim(),city:city,type:type,series:b.series||"",supplier:sup,w:w,h:h,openingWidth:+$("openingWidth").value||0,openingHeightLeft:+$("openingHeightLeft").value||0,openingHeightRight:+$("openingHeightRight").value||0,headroom:headroom,headroomSetup:type==="Sectional"?(hr.label||""):"Measured",sideRoomLeft:+$("sideRoomLeft").value||0,sideRoomRight:+$("sideRoomRight").value||0,extraDecision:$("extraDecision").value,colour:spec.colour,profile:spec.profile,motor:mi.name,addons:ad.names.join("; "),addonItems:ad.items,addonCostTotal:ad.costTotal,addonRetailTotal:ad.retailTotal,removal:rem,removalRetail:rem?S.removalRetail:0,specialLift:specialLift,installationCost:ta,installationLabel:labour.label,motorRetail:mi.retail,customExtra:0,notes:$("notes").value.trim(),recommended:rec,minimum:min,issue:issue,status:hasSize&&!review?"APPROVED":"CALL OFFICE",margin:margin,baseProfit:baseProfit,extrasProfit:extrasProfit,targetProfit:(hasSize&&b.ok?targetProfit:null),businessName:S.businessName,businessPhone:contact.phone,businessEmail:contact.email,businessWebsite:contact.website,quoteValidity:S.quoteValidity};
  $("recommended").textContent=hasSize?(rec?money(rec):"REVIEW"):"—";$("minimum").textContent=min?money(min):"—";$("issue").textContent=issue?money(issue):"—";$("basisSupplier").textContent=hasSize&&b.ok?b.basis:"—";$("motorName").textContent=mi.name;if($("headroomResult")){$("headroomResult").textContent=type==="Sectional"?(hr.ok?hr.label+" — "+headroom+" mm":(hr.reason||"Enter headroom")):"Not required for Roller";$("headroomResult").className="note "+(type==="Sectional"&&!hr.ok?"warning":"")}
  $("steelCost").textContent=b.c&&b.c["Steel-Line"]?money(b.c["Steel-Line"].cost):"—";$("centCost").textContent=b.c&&b.c.Centurion?money(b.c.Centurion.cost):"—";$("addonCost").textContent=money(ad.costTotal);$("techCost").textContent=hasSize&&labour.ok?money(ta):"REVIEW";$("motorCost").textContent=money(mi.cost);$("margin").textContent=margin==null?"—":money(margin);$("margin").style.color=margin==null?"":(baseProfit!=null&&baseProfit+0.5<targetProfit?"#b42318":"#177a3d");if($("targetProfit"))$("targetProfit").textContent=hasSize&&b.ok?money(targetProfit):"—";if($("baseProfit"))$("baseProfit").textContent=baseProfit==null?"—":money(baseProfit);if($("extrasProfit"))$("extrasProfit").textContent=extrasProfit==null?"—":money(extrasProfit);
  const st=$("status");st.className="status "+(hasSize?(review?"bad":"good"):(quoteDoors.length?"good":"bad"));st.textContent=hasSize?(review?"CALL OFFICE — "+reason:"READY — current door can be quoted"):(quoteDoors.length?"READY — "+quoteDoors.length+" completed door(s) in quote":"ENTER CURRENT DOOR DETAILS");
@@ -478,7 +502,7 @@ function bindInputs(){
 async function registerAppWorker(){
  if(!("serviceWorker" in navigator)||location.protocol==="file:")return;
  try{
-   const reg=await navigator.serviceWorker.register("./sw.js?v=22");await reg.update();
+   const reg=await navigator.serviceWorker.register("./sw.js?v=23");await reg.update();
    let reloading=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(reloading)return;reloading=true;location.reload()})
  }catch(e){}
 }
