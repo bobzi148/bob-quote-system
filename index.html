@@ -1,23 +1,48 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1f33"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><link rel="manifest" href="manifest.webmanifest?v=22"><link rel="stylesheet" href="style.css?v=22"><title>BOB Quote System</title></head><body class="office"><div class="app">
-<header class="top"><div class="logo logo-img"><img src="brand-logo.svg?v=22" alt="B.O.B Garage Doors"></div><div><h1>Garage Doors Quote System</h1><p id="headerContact">Verified supplier pricing • office & technician workflow</p></div><div class="modes no-print"><button class="ghost" onclick="installApp()">Install</button><button class="ghost" onclick="repairApp()">Repair / Refresh</button><button class="ghost role-switch" onclick="setMode('tech')">Tech</button><button class="white role-switch" onclick="setMode('office')">Office</button><button class="ghost role-switch" onclick="setMode('admin')">Admin</button></div></header>
-<nav class="tabs no-print"><button class="tab active" onclick="showTab('builder',this)">Quote Builder</button><button class="tab" onclick="showTab('prices',this)">Price List</button><button class="tab" onclick="showTab('addons',this)">Add-ons Live</button><button class="tab office-only" onclick="showTab('history',this)">Saved Quotes</button><button class="tab admin-only" onclick="showTab('settings',this)">Settings</button></nav>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1f33"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><link rel="manifest" href="manifest.webmanifest?v=23"><link rel="stylesheet" href="style.css?v=23"><title>BOB Quote System</title></head><body class="office"><div class="app">
+<header class="top"><div class="logo logo-img"><img src="brand-logo.svg?v=23" alt="B.O.B Garage Doors"></div><div><h1>Garage Doors Quote System</h1><p id="headerContact">Verified supplier pricing • office & technician workflow</p></div><div class="modes no-print"><button class="ghost" onclick="installApp()">Install</button><button class="ghost" onclick="repairApp()">Repair / Refresh</button><button class="ghost role-switch" onclick="setMode('tech')">Tech</button><button class="white role-switch" onclick="setMode('office')">Office</button><button class="ghost role-switch" onclick="setMode('admin')">Admin</button></div></header>
+<nav class="tabs no-print"><button class="tab active" onclick="showTab('builder',this)">Quote Builder</button><button class="tab tech-hidden" onclick="showTab('prices',this)">Price List</button><button class="tab tech-hidden" onclick="showTab('addons',this)">Add-ons Live</button><button class="tab office-only" onclick="showTab('history',this)">Saved Quotes</button><button class="tab admin-only" onclick="showTab('settings',this)">Settings</button></nav>
 
-<section id="builder" class="page"><div class="grid"><div class="card no-print"><h2>Job details</h2><div class="sub">Enter the actual door size. The supplier table is matched automatically.</div><div class="form">
-<div class="field"><label>Quote #</label><input id="quoteNo" class="edit"></div><div class="field"><label>Customer</label><input id="customer" class="edit"></div>
-<div class="field"><label>Mobile</label><input id="phone" class="edit" inputmode="tel"></div><div class="field"><label>Email</label><input id="email" class="edit" inputmode="email"></div>
-<div class="field"><label>Suburb</label><input id="suburb" class="edit"></div><div class="field"><label>City</label><select id="city" class="edit"><option>Perth</option><option>Brisbane</option></select></div>
-<div class="field"><label>Door type *</label><select id="doorType" class="edit" required><option>Sectional</option><option>Roller</option></select></div><div class="field"><label>Supplier</label><select id="supplier" class="edit"><option value="Auto">Auto — lowest supplier cost</option><option>Steel-Line</option><option>Centurion</option></select></div>
-<div class="field"><label>Width mm</label><input id="width" class="edit" type="number" value="4800"></div><div class="field"><label>Height mm</label><input id="height" class="edit" type="number" value="2400"></div>
-<div class="field full" id="headroomField"><label>Headroom available mm *</label><input id="headroom" class="edit" type="number" min="1" step="1" placeholder="Measure from top of opening to ceiling / lowest obstruction"><div class="hint">Required for every Sectional door. The app automatically selects Standard, Front Mount LHR or Rear Mount LHR.</div><div id="headroomResult" class="note">Enter headroom measurement.</div></div>
-<div class="field"><label>Door colour *</label><select id="doorColour" class="edit" required></select><div class="hint">Required for every quote.</div></div><div class="field"><label>Door profile / style *</label><select id="doorProfile" class="edit" required></select><div class="hint">Required for every quote.</div></div>
-<div class="field"><label>Motor</label><select id="motor" class="edit"><option>Manual</option><option selected>Standard Motor</option><option>Merlin</option><option>Grifco LR Drive</option></select></div><div class="field"><label>Remove old door</label><select id="removal" class="edit"><option>No</option><option>Yes</option></select></div>
+<section id="builder" class="page"><div class="grid"><div class="card no-print"><div class="section-head compact-head"><div><h2>Job details</h2><div class="sub">All starred fields are required before a quote can be issued.</div></div></div>
+<div class="form job-compact">
+<div class="field office-only"><label>Quote #</label><input id="quoteNo" class="edit"></div>
+<div class="field"><label>Job number *</label><input id="jobNumber" class="edit" required placeholder="SAT job #"></div>
+<div class="field"><label>Name *</label><input id="customer" class="edit" required></div>
+<div class="field"><label>Mobile *</label><input id="phone" class="edit" inputmode="tel" required></div>
+<div class="field"><label>Email *</label><input id="email" class="edit" inputmode="email" type="email" required></div>
+<div class="field address-field"><label>Address *</label><input id="suburb" class="edit" required placeholder="Full job address"></div>
+<div class="field"><label>City *</label><select id="city" class="edit" required><option>Perth</option><option>Brisbane</option></select></div>
+</div>
+<hr class="compact-rule">
+<div class="section-head compact-head"><div><h2>Door & site measurements</h2><div class="sub">Door size, opening and clearances are mandatory.</div></div></div>
+<div class="form measurement-grid">
+<div class="field"><label>Door type *</label><select id="doorType" class="edit" required><option>Sectional</option><option>Roller</option></select></div>
+<div class="field"><label>Supplier *</label><select id="supplier" class="edit" required><option value="Auto">Auto — lowest supplier cost</option><option>Steel-Line</option><option>Centurion</option></select></div>
+<div class="field"><label>Door width mm *</label><input id="width" class="edit" type="number" min="1" required></div>
+<div class="field"><label>Door height mm *</label><input id="height" class="edit" type="number" min="1" required></div>
+
+<div class="field"><label>Opening width mm *</label><input id="openingWidth" class="edit" type="number" min="1" required></div>
+<div class="field"><label>Opening height L mm *</label><input id="openingHeightLeft" class="edit" type="number" min="1" required></div>
+<div class="field"><label>Opening height R mm *</label><input id="openingHeightRight" class="edit" type="number" min="1" required></div>
+<div class="field"><label>Headroom mm *</label><input id="headroom" class="edit" type="number" min="1" step="1" required></div>
+
+<div class="field"><label>Side room L mm *</label><input id="sideRoomLeft" class="edit" type="number" min="1" required></div>
+<div class="field"><label>Side room R mm *</label><input id="sideRoomRight" class="edit" type="number" min="1" required></div>
+<div class="field"><label>Door colour *</label><select id="doorColour" class="edit" required></select></div>
+<div class="field"><label>Profile *</label><select id="doorProfile" class="edit" required></select></div>
+
+<div class="field"><label>Motor *</label><select id="motor" class="edit" required><option>Manual</option><option selected>Standard Motor</option><option>Merlin</option><option>Grifco LR Drive</option></select></div>
+<div class="field"><label>Removal *</label><select id="removal" class="edit" required><option>No</option><option>Yes</option></select></div>
+<div class="field"><label>Extras *</label><select id="extraDecision" class="edit" required><option value="">Select</option><option value="No extras">No extras</option><option value="Add extras">Add extras</option></select></div>
 <div class="field brisbane-install"><label>Special lifting device</label><select id="specialLift" class="edit"><option>No</option><option>Yes</option></select></div>
-<div class="field full"><label>Notes / special instructions</label><textarea id="notes" class="edit" placeholder="Colour, access, measurements, customer requests..."></textarea></div></div>
+
+<div class="field full headroom-inline"><div id="headroomResult" class="note">Enter headroom measurement.</div></div>
+<div class="field full"><label>Notes *</label><textarea id="notes" class="edit" required placeholder="Enter site/access/installation notes. Use N/A if there are no special notes."></textarea></div>
+</div>
 <hr><div class="section-head"><div><h2>Extras for this door</h2><div class="sub">Choose an extra to see its internal cost. Internal cost never appears to the customer. Headroom setup is selected automatically from the mandatory Headroom measurement and added at $189 incl. GST. Jamb and Pelmet use fixed customer prices. Mammoth insulation calculates automatically from the door size and sells for the supplier cost incl. GST + $300.</div></div></div>
 <div id="addonMessage" class="note"></div>
 <div class="extra-composer">
   <div class="field"><label>Extra</label><select id="extraChoice" class="edit"></select></div>
-  <div class="field"><label>Internal cost ex GST</label><input id="extraCost" class="internal-cost" type="number" min="0" step="1" readonly><div class="hint">Internal only — never shown to customer.</div></div>
+  <div class="field tech-hidden"><label>Internal cost ex GST</label><input id="extraCost" class="internal-cost" type="number" min="0" step="1" readonly><div class="hint">Internal only — never shown to customer.</div></div>
   <div class="field"><label>Description (for custom extra)</label><input id="extraDescription" class="edit" placeholder="e.g. Custom flashing"></div>
   <div class="field"><label id="extraMeasureLabel">Size / measure</label><input id="extraMeasure" class="edit" placeholder="e.g. 4800mm, 2 panels, pair"></div>
   <div class="field"><label>Qty</label><input id="extraQty" class="edit" type="number" value="1" min="1" step="1"></div>
@@ -60,4 +85,4 @@
 <div class="field"><label>Brisbane Single Sectional install ex GST</label><input id="s_bneSingleInstall" type="number"></div><div class="field"><label>Brisbane Single remove + install ex GST</label><input id="s_bneSingleRemove" type="number"></div><div class="field"><label>Brisbane Single/Double motor labour ex GST</label><input id="s_bneMotorLabour" type="number"></div>
 <div class="field"><label>Brisbane Double Sectional install ex GST</label><input id="s_bneDoubleInstall" type="number"></div><div class="field"><label>Brisbane Double remove + install ex GST</label><input id="s_bneDoubleRemove" type="number"></div><div class="field"><label>Brisbane double sectional starts above width</label><input id="s_bneDoubleWidth" type="number"><div class="hint">Default: above 3000 mm.</div></div>
 <div class="field"><label>Brisbane special lift labour ex GST</label><input id="s_bneSpecialLift" type="number"></div></div><div class="actions no-print" style="max-width:390px"><button class="btn navy" onclick="saveSettings()">Save</button><button class="btn soft" onclick="resetSettings()">Reset</button></div></div></section>
-</div><div class="version-chip no-print">BOB Quotes v22</div><div id="toast" class="toast">Done</div><script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script><script src="app.js?v=22"></script></body></html>
+</div><div class="version-chip no-print">BOB Quotes v23</div><div id="toast" class="toast">Done</div><script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script><script src="app.js?v=23"></script></body></html>
