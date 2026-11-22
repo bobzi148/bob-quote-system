@@ -61,3 +61,38 @@ body.role-locked .role-switch{display:none!important}
 .public-door-total{padding:12px 15px;text-align:right;font-weight:1000;color:#123d24;background:#f9fcfa;border-top:1px solid #e2e8f0}
 
 .internal-cost{background:#f1f4f7!important;color:#465364;font-weight:800}.internal-cost:not([readonly]){background:#fff8e8!important}
+
+/* v23 technician workflow */
+body.tech .tabs{display:none!important}
+body.tech .tech-hidden{display:none!important}
+body.tech .top{padding-bottom:10px}
+body.tech .top h1{font-size:18px}
+body.tech .top p{display:none}
+body.tech .grid{grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr)}
+.job-compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.job-compact .address-field{grid-column:span 2}
+.measurement-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.compact-head{margin-bottom:8px}
+.compact-head .sub{margin-bottom:0}
+.compact-rule{margin:12px 0}
+.headroom-inline{margin-top:-2px}
+body.tech .card{padding:13px}
+body.tech .form{gap:7px}
+body.tech input,body.tech select,body.tech textarea{padding:9px;font-size:14px}
+body.tech textarea{min-height:70px}
+body.tech label{font-size:10px}
+body.tech .sub,body.tech .hint{font-size:10px}
+body.tech .section-head{gap:6px}
+.required-missing{border-color:#c62828!important;background:#fff1f1!important}
+@media(max-width:900px){
+  .job-compact{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .job-compact .address-field{grid-column:span 2}
+  .measurement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:520px){
+  body.tech .grid{grid-template-columns:1fr}
+  .job-compact,.measurement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .job-compact .address-field{grid-column:span 2}
+  body.tech .card{padding:10px}
+  body.tech input,body.tech select,body.tech textarea{padding:8px;font-size:13px}
+}
