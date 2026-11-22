@@ -337,13 +337,13 @@ function addCurrentDoor(){
  quoteDoors.push(structuredCloneSafe(q));clearCurrentDoor();saveDraft();calc();toast("Door added — start the next door")
 }
 function clearCurrentDoor(){
- $("doorType").value="Sectional";$("supplier").value="Auto";$("width").value="";$("height").value="";if($("headroom"))$("headroom").value="";$("motor").value="Standard Motor";$("removal").value="No";if($("specialLift"))$("specialLift").value="No";$("notes").value="";$("finalOffer").value="";
+ $("doorType").value="Sectional";$("supplier").value="Auto";["width","height","openingWidth","openingHeightLeft","openingHeightRight","headroom","sideRoomLeft","sideRoomRight"].forEach(function(id){if($(id))$(id).value=""});$("motor").value="Standard Motor";$("removal").value="No";if($("extraDecision"))$("extraDecision").value="";if($("specialLift"))$("specialLift").value="No";$("notes").value="";$("finalOffer").value="";
  currentExtras=[];populateColourProfile(false);renderAddons(false)
 }
 function editDoor(i){
  const d=quoteDoors[i];if(!d)return;
  const current=calc();if(doorStarted(current)&&!confirm("Replace the current unfinished door with Door "+(i+1)+"?"))return;
- quoteDoors.splice(i,1);$("doorType").value=d.type;$("supplier").value=d.supplier;$("width").value=d.w;$("height").value=d.h;if($("headroom"))$("headroom").value=d.headroom||"";$("motor").value=(d.motor==="JayTech"||d.motor==="Superlift")?"Standard Motor":d.motor;$("removal").value=d.removal?"Yes":"No";if($("specialLift"))$("specialLift").value=d.specialLift?"Yes":"No";$("notes").value=d.notes||"";$("finalOffer").value=d.issue&&d.issue!==d.recommended?d.issue:"";
+ quoteDoors.splice(i,1);$("doorType").value=d.type;$("supplier").value=d.supplier;$("width").value=d.w;$("height").value=d.h;if($("openingWidth"))$("openingWidth").value=d.openingWidth||"";if($("openingHeightLeft"))$("openingHeightLeft").value=d.openingHeightLeft||"";if($("openingHeightRight"))$("openingHeightRight").value=d.openingHeightRight||"";if($("headroom"))$("headroom").value=d.headroom||"";if($("sideRoomLeft"))$("sideRoomLeft").value=d.sideRoomLeft||"";if($("sideRoomRight"))$("sideRoomRight").value=d.sideRoomRight||"";if($("extraDecision"))$("extraDecision").value=d.extraDecision||((d.addonItems||[]).length?"Add extras":"No extras");$("motor").value=(d.motor==="JayTech"||d.motor==="Superlift")?"Standard Motor":d.motor;$("removal").value=d.removal?"Yes":"No";if($("specialLift"))$("specialLift").value=d.specialLift?"Yes":"No";$("notes").value=d.notes||"";$("finalOffer").value=d.issue&&d.issue!==d.recommended?d.issue:"";
  populateColourProfile(false);$("doorColour").value=d.colour||"";$("doorProfile").value=d.profile||"";
  currentExtras=(d.addonItems||[]).filter(function(x){return !(x.uid==="auto-headroom"||x.presetId==="hdr_std"||x.presetId==="lhr_front"||x.presetId==="lhr_rear")}).map(function(x){return Object.assign({},x,{uid:x.uid||uid()})});
  renderAddons(false);saveDraft();calc();window.scrollTo({top:0,behavior:"smooth"})
@@ -352,14 +352,14 @@ function removeDoor(i){if(!quoteDoors[i])return;if(confirm("Remove Door "+(i+1)+
 function safeWrite(key,value){try{const prev=localStorage.getItem(key);if(prev!==null)localStorage.setItem(key+"_backup",prev);localStorage.setItem(key,value)}catch(e){}}
 function saveDraft(){
  if(new URLSearchParams(location.search).get("quote"))return;
- const ids=["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","headroom","doorColour","doorProfile","motor","removal","specialLift","notes","finalOffer"],fields={};
+ const ids=["quoteNo","jobNumber","customer","phone","email","suburb","city","doorType","supplier","width","height","openingWidth","openingHeightLeft","openingHeightRight","headroom","sideRoomLeft","sideRoomRight","doorColour","doorProfile","motor","removal","extraDecision","specialLift","notes","finalOffer"],fields={};
  ids.forEach(function(id){if($(id))fields[id]=$(id).value});
  safeWrite(DRAFT_KEY,JSON.stringify({version:APP_VERSION,fields:fields,currentExtras:currentExtras,quoteDoors:quoteDoors,updatedAt:new Date().toISOString()}))
 }
 function restoreDraft(){
  try{
   const d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");if(!d||!d.fields)return false;
-  ["quoteNo","customer","phone","email","suburb","city","doorType","supplier","width","height","headroom","motor","removal","specialLift","notes","finalOffer"].forEach(function(id){if($(id)&&d.fields[id]!==undefined)$(id).value=d.fields[id]});
+  ["quoteNo","jobNumber","customer","phone","email","suburb","city","doorType","supplier","width","height","openingWidth","openingHeightLeft","openingHeightRight","headroom","sideRoomLeft","sideRoomRight","motor","removal","extraDecision","specialLift","notes","finalOffer"].forEach(function(id){if($(id)&&d.fields[id]!==undefined)$(id).value=d.fields[id]});
   populateColourProfile(false);if(d.fields.doorColour!==undefined)$("doorColour").value=d.fields.doorColour;if(d.fields.doorProfile!==undefined)$("doorProfile").value=d.fields.doorProfile;
   currentExtras=Array.isArray(d.currentExtras)?d.currentExtras:[];quoteDoors=Array.isArray(d.quoteDoors)?d.quoteDoors:[];
   return true
@@ -385,7 +385,7 @@ async function logoPngData(){
    return data
  }catch(e){return null}
 }
-function pdfFileName(q){return `${(q.quoteNo||"BOB-Quote").replace(/[^a-z0-9_-]/gi,"-")}.pdf`}
+function pdfFileName(q){const job=(q.jobNumber||"JOB").replace(/[^a-z0-9_-]/gi,"-"),quote=(q.quoteNo||"BOB-Quote").replace(/[^a-z0-9_-]/gi,"-");return `${job}-${quote}.pdf`}
 function pdfMoney(n){return "$"+Number(n||0).toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2})}
 
 async function buildPdfQuote(){
@@ -403,12 +403,12 @@ async function buildPdfQuote(){
  header();let y=59;
  function ensure(h){if(y+h>267)y=newPage()}
  doc.setTextColor.apply(doc,ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE DETAILS",M,y);y+=5;doc.setFillColor.apply(doc,light);doc.roundedRect(M,y,PW-2*M,30,3,3,"F");
- const detail=[["Quote #",q.quoteNo||"-"],["Date",new Date().toLocaleDateString("en-AU")],["Valid for",q.quoteValidity+" days"],["Customer",q.customer||"-"],["Phone",q.phone||"-"],["Email",q.email||"-"],["Location",q.suburb||q.city],["Doors",String(q.doors.length)]];
+ const detail=[["Job #",q.jobNumber||"-"],["Quote #",q.quoteNo||"-"],["Date",new Date().toLocaleDateString("en-AU")],["Customer",q.customer||"-"],["Phone",q.phone||"-"],["Email",q.email||"-"],["Address",q.address||q.suburb||q.city],["Doors",String(q.doors.length)]];
  detail.forEach(function(r,i){const col=i%4,row=Math.floor(i/4),x=M+5+col*43.5,yy=y+7+row*12;doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor.apply(doc,muted);doc.text(r[0],x,yy);doc.setFont("helvetica","bold");doc.setFontSize(8.4);doc.setTextColor.apply(doc,ink);doc.text(String(r[1]).slice(0,23),x,yy+4.5)});y+=39;
  q.doors.forEach(function(d,i){
    ensure(49);doc.setFillColor.apply(doc,navy);doc.roundedRect(M,y,PW-2*M,8,2,2,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text("DOOR "+(i+1)+" — "+String(d.type||"").toUpperCase()+(d.series?" SERIES "+String(d.series).toUpperCase():""),M+4,y+5.5);doc.setTextColor.apply(doc,yellow);doc.text(pdfMoney(d.issue)+" incl. GST",PW-M-4,y+5.5,{align:"right"});y+=11;
    doc.setDrawColor.apply(doc,line);doc.setFillColor(255,255,255);doc.roundedRect(M,y,PW-2*M,31,2,2,"FD");
-   const left=M+5,right=M+95,rowsL=[["Width",d.w+" mm"],["Height",d.h+" mm"],["Colour",d.colour],[d.type==="Sectional"?"Headroom":"Profile / style",d.type==="Sectional"?(d.headroom+" mm — "+d.headroomSetup):d.profile]],rowsR=[["Motor",d.motor],["Removal",d.removal?"Included":"Not included"],["Extras",(d.addonItems||[]).length+" item(s)"],["Installation","Supply & install"]];
+   const left=M+5,right=M+95,rowsL=[["Door",d.w+"W × "+d.h+"H"],["Opening",d.openingWidth+"W × "+d.openingHeightLeft+"H L / "+d.openingHeightRight+"H R"],["Headroom",d.headroom+" mm"],["Side room",d.sideRoomLeft+" L / "+d.sideRoomRight+" R"]],rowsR=[["Colour",d.colour],["Profile",d.profile],["Motor",d.motor],["Removal",d.removal?"Included":"Not included"]];
    rowsL.forEach(function(r,j){const yy=y+6+j*6.3;doc.setFont("helvetica","normal");doc.setFontSize(7.6);doc.setTextColor.apply(doc,muted);doc.text(r[0],left,yy);doc.setFont("helvetica","bold");doc.setTextColor.apply(doc,ink);doc.text(String(r[1]||"-").slice(0,38),left+25,yy)});
    rowsR.forEach(function(r,j){const yy=y+6+j*6.3;doc.setFont("helvetica","normal");doc.setFontSize(7.6);doc.setTextColor.apply(doc,muted);doc.text(r[0],right,yy);doc.setFont("helvetica","bold");doc.setTextColor.apply(doc,ink);doc.text(String(r[1]||"-").slice(0,31),right+28,yy)});y+=37
  });
@@ -430,7 +430,7 @@ async function buildPdfQuote(){
  ensure(38);doc.setTextColor.apply(doc,ink);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("QUOTE INFORMATION",M,y);y+=6;doc.setFont("helvetica","normal");doc.setFontSize(8.2);doc.setTextColor.apply(doc,muted);
  ["This quotation is valid for "+q.quoteValidity+" days.","All prices shown include GST unless stated otherwise.","Final manufacture/order is based on the confirmed width, height, colour and profile shown for each door.","Any additional work not listed in this quotation requires approval before proceeding."].forEach(function(t){const a=doc.splitTextToSize("• "+t,PW-2*M);doc.text(a,M,y);y+=a.length*4.1+2});
  doc.setDrawColor.apply(doc,yellow);doc.setLineWidth(.8);doc.line(M,279,PW-M,279);doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor.apply(doc,ink);doc.text(S.businessName,M,285);doc.setFont("helvetica","normal");doc.setTextColor.apply(doc,muted);doc.text([q.businessPhone,q.businessEmail,q.businessWebsite].filter(Boolean).join(" • ").slice(0,105),M,290);
- return doc.output("blob")
+ const blob=doc.output("blob");persistQuoteRecord(q,"pdf-generated");return blob
 }
 function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500)}
 async function downloadPdfQuote(){const q=getFullQuote(),blob=await buildPdfQuote();if(!blob)return;downloadBlob(blob,pdfFileName(q));toast("PDF downloaded")}
@@ -438,13 +438,20 @@ async function sharePdfQuote(){const q=getFullQuote(),blob=await buildPdfQuote()
 function printable(autoPrint=true){const q=calc(),scr=safe($("summary").textContent),contact=[q.businessPhone,q.businessEmail,q.businessWebsite].filter(Boolean).map(safe).join(" • ");return`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(q.quoteNo)}</title><style>body{font-family:Arial;color:#152536;padding:40px;max-width:820px;margin:auto}.head{background:#0b1f33;color:white;padding:24px;border-radius:16px}.contact{opacity:.8;margin-top:6px}.price{font-size:36px;font-weight:900;margin:26px 0;color:#174b2d}.box{border:1px solid #d8e0ea;border-radius:12px;padding:20px;line-height:1.7;white-space:pre-wrap}.foot{margin-top:25px;color:#687386;font-size:12px}@media(max-width:600px){body{padding:18px}}</style></head><body><div class="head"><img src="brand-logo.svg" style="width:210px;max-width:60%;height:auto"><div style="font-size:24px;font-weight:900;margin-top:8px">${safe(S.businessName)}</div><div>Supply & Installation Quote • ${safe(q.city)}</div><div class="contact">${contact}</div></div><div class="price">${q.issue?money(q.issue)+" incl. GST":"Office review required"}</div><div class="box">${scr}</div><div class="foot">Quote valid for ${safe(S.quoteValidity)} days.</div>${autoPrint?'<script>window.onload=()=>window.print()<\\/script>':""}</body></html>`}
 function printQuote(){const w=window.open("","_blank");if(!w)return toast("Allow pop-ups");w.document.write(printable(true));w.document.close()}
 
+function persistQuoteRecord(q,source){
+ if(!q||!q.doors||!q.doors.length)return;
+ const a=JSON.parse(localStorage.getItem(QUOTES_KEY)||"[]"),now=new Date().toISOString(),record=Object.assign({},q,{date:q.date||now,lastSavedAt:now,saveSource:source||"manual"});
+ const key=(record.jobNumber||"")+"|"+(record.quoteNo||"");
+ const filtered=a.filter(function(x){return ((x.jobNumber||"")+"|"+(x.quoteNo||""))!==key});
+ filtered.unshift(record);safeWrite(QUOTES_KEY,JSON.stringify(filtered.slice(0,500)))
+}
 function saveQuote(){
  const q=getFullQuote();if(!q.doors.length)return toast("Add at least one door first");
- const a=JSON.parse(localStorage.getItem(QUOTES_KEY)||"[]");a.unshift(Object.assign({},q,{date:new Date().toISOString()}));safeWrite(QUOTES_KEY,JSON.stringify(a.slice(0,300)));toast("Quote saved")
+ persistQuoteRecord(q,"manual");toast("Quote saved")
 }
 function newQuote(){
  if((quoteDoors.length||doorStarted(calc()))&&!confirm("Start a new quote? The current draft will be cleared."))return;
- quoteDoors=[];currentExtras=[];["customer","phone","email","suburb","notes","finalOffer"].forEach(function(x){if($(x))$(x).value=""});
+ quoteDoors=[];currentExtras=[];["jobNumber","customer","phone","email","suburb","notes","finalOffer"].forEach(function(x){if($(x))$(x).value=""});
  $("quoteNo").value=qno();$("city").value="Perth";clearCurrentDoor();localStorage.removeItem(DRAFT_KEY);refreshHeaderContact();calc();saveDraft()
 }
 function setMode(m,boot){
@@ -454,8 +461,8 @@ function setMode(m,boot){
  document.body.className=m+(ROLE_LOCK?" role-locked":"");localStorage.setItem("bob_v3_mode",m);
  if(m!=="admin"&&$("settings")&&!$("settings").classList.contains("hidden"))showTab("builder",document.querySelector(".tab"))
 }
-function showTab(id,e){document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));if(e)e.classList.add("active");if(id==="history")renderHistory();if(id==="prices")renderPrices();if(id==="addons")renderCatalog()}
-function renderHistory(){const a=JSON.parse(localStorage.getItem("bob_v3_quotes")||"[]");$("historyTable").innerHTML="<tr><th>Date</th><th>Quote</th><th>Customer</th><th>Job</th><th>Price</th><th>Status</th></tr>"+(a.length?a.map(x=>`<tr><td>${new Date(x.date).toLocaleDateString("en-AU")}</td><td>${x.quoteNo}</td><td>${x.customer||"—"}<br><small>${x.suburb||""}</small></td><td>${x.doors?.length||1} door(s)<br><small>${x.doors?.[0]?(x.doors[0].type+" "+x.doors[0].w+"×"+x.doors[0].h):(x.type+" "+x.w+"×"+x.h)}</small></td><td><b>${money(x.issue)}</b></td><td>${x.status}</td></tr>`).join(""):`<tr><td colspan="6">No saved quotes.</td></tr>`)}
+function showTab(id,e){if(ROLE_LOCK==="tech"&&id!=="builder")return;document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));if(e)e.classList.add("active");if(id==="history")renderHistory();if(id==="prices")renderPrices();if(id==="addons")renderCatalog()}
+function renderHistory(){const a=JSON.parse(localStorage.getItem("bob_v3_quotes")||"[]");$("historyTable").innerHTML="<tr><th>Date</th><th>Job #</th><th>Quote</th><th>Customer</th><th>Doors</th><th>Price</th><th>Status</th></tr>"+(a.length?a.map(x=>`<tr><td>${new Date(x.date).toLocaleDateString("en-AU")}</td><td><b>${x.jobNumber||"—"}</b></td><td>${x.quoteNo}</td><td>${x.customer||"—"}<br><small>${x.address||x.suburb||""}</small></td><td>${x.doors?.length||1} door(s)<br><small>${x.doors?.[0]?(x.doors[0].type+" "+x.doors[0].w+"×"+x.doors[0].h):(x.type+" "+x.w+"×"+x.h)}</small></td><td><b>${money(x.issue)}</b></td><td>${x.status}</td></tr>`).join(""):`<tr><td colspan="7">No saved quotes.</td></tr>`)}
 function clearHistory(){if(confirm("Clear saved quotes?")){localStorage.removeItem("bob_v3_quotes");renderHistory()}}
 function exportCSV(){const a=JSON.parse(localStorage.getItem("bob_v3_quotes")||"[]");if(!a.length)return toast("No saved quotes");const rows=[["Date","Quote","Customer","Phone","Email","Suburb","City","Door","Supplier","Width","Height","Motor","Add-ons","Notes","Price","Status","Margin"],...a.map(x=>[x.date,x.quoteNo,x.customer,x.phone,x.email,x.suburb,x.city,x.type,x.supplier,x.w,x.h,x.motor,x.addons,x.notes,x.issue,x.status,x.margin])],csv=rows.map(r=>r.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")).join("\n"),b=new Blob([csv],{type:"text/csv"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download="BOB_Quotes.csv";l.click()}
 function widths(type,sup){if(type==="Sectional")return sup==="Steel-Line"?[2400,3000,3500,4500,4800,5000,5300,5650,6200]:sup==="Centurion"?[2400,3000,3500,4300,4800,5150,5565,5960,6200]:[2400,3000,3500,4300,4500,4800,5000,5300,5650,5960,6200];return sup==="Steel-Line"?[1500,2150,2650,2850,3150,3250,3430,3760,4370,5100]:sup==="Centurion"?[1500,2000,2490,2500,2650,2800,3100,3400,3760,4000,4200,4370,4700,4980,5100,5400]:[1500,2000,2150,2490,2500,2650,2800,3100,3150,3400,3430,3760,4000,4200,4370,4700,4980,5100,5400]}
@@ -487,14 +494,14 @@ async function repairApp(){
 }
 function toggleBrisbaneInstallFields(){document.querySelectorAll(".brisbane-install").forEach(function(el){el.style.display=$("city")&&$("city").value==="Brisbane"?"flex":"none"})}
 function healthCheck(){
- const ids=["builder","prices","addons","extraChoice","extraCost","extraPrice","doorItems","summary","recommended"],missing=ids.filter(function(id){return !$(id)});
+ const ids=["builder","prices","addons","extraChoice","extraCost","extraPrice","doorItems","summary","recommended","jobNumber","openingWidth","openingHeightLeft","openingHeightRight","sideRoomLeft","sideRoomRight","extraDecision"],missing=ids.filter(function(id){return !$(id)});
  if(missing.length){localStorage.setItem("bob_last_error","Missing UI: "+missing.join(","));return false}
  return true
 }
 function bindInputs(){
  ["plCity","plDoor","plSupplier","plMotor"].forEach(function(x){if($(x))$(x).addEventListener("change",renderPrices)});
  ["catSupplier","catDoor","catWidth","catHeight"].forEach(function(x){if($(x))$(x).addEventListener("input",renderCatalog)});
- ["city","doorType","supplier","width","height","doorColour","doorProfile","motor","removal","specialLift","notes","finalOffer","customer","phone","email","suburb","quoteNo"].forEach(function(x){if($(x))$(x).addEventListener("input",function(){
+ ["city","doorType","supplier","width","height","openingWidth","openingHeightLeft","openingHeightRight","headroom","sideRoomLeft","sideRoomRight","doorColour","doorProfile","motor","removal","extraDecision","specialLift","notes","finalOffer","jobNumber","customer","phone","email","suburb","quoteNo"].forEach(function(x){if($(x))$(x).addEventListener("input",function(){
    if(["doorType","supplier","width","height"].includes(x)){populateColourProfile(true);renderAddons(true)}
    if(x==="city"){refreshHeaderContact();toggleBrisbaneInstallFields()}calc();saveDraft()
  })})
